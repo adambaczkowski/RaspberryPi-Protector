@@ -116,19 +116,17 @@ function check_device_info() {
         let "check_device_info_counter++"
     fi
     
-    if [ "$check_device_info_counter" -ne 0 ]; then
-        result=$(whiptail --title "This device doesn't meet requirements." --yesno " Are you sure you want proceed with installation?" 8 78 3>&1 1>&2 2>&3)
-        if [ $result = 0 ]; then
-            echo "yes"
-        else
-            echo "no"
-        fi
-        
-    else
-        exit 1
-    fi
-    
-fi
+   # if [ "$check_device_info_counter" -ne 0 ]; then
+    #    result=$(whiptail --title "This device doesn't meet requirements." --yesno " Are you sure you want proceed with installation?" 8 78 3>&1 1>&2 2>&3)
+     #   if [ $result = 0 ]; then
+       #     echo "yes"
+      #  else
+        #    echo "no"
+        #fi 
+    #else
+     #   exit 1
+    #fi 
+#fi
 
 echo "This device meets the requirements for installation"
 neofetch
