@@ -117,8 +117,11 @@ function check_device_info() {
     fi
     
     if [ "$check_device_info_counter" -ne 0 ]; then
-        whiptail --title "This device doesn't meet requirements." --yesno " Are you sure you want proceed with installation?" 8 78
-        if then
+        result=$(whiptail --title "This device doesn't meet requirements." --yesno " Are you sure you want proceed with installation?" 8 78 3>&1 1>&2 2>&3)
+        if [ $result = 0 ]; then
+            echo "yes"
+        else
+            echo "no"
         fi
         
     else
