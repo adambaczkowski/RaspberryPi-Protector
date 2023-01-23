@@ -68,11 +68,12 @@ function main() {
     High_RAM_Mail_Setup || echo "${RED}Setting High RAM notification mail script has failed ❌${RED}"
     Cleanup || echo "${RED}Cleanup function has failed ❌${RED}"
     summary
+    
     end_time=$(date +%s)
     elapsed_time=$((end_time - start_time))
     minutes=$((elapsed_time / 60))
     seconds=$((elapsed_time % 60))
-    echo "Installation took: $minutes minutes and $seconds seconds ⏰"
+    echo "Installation took: $minutes minutes and $seconds seconds 🕑"
     reboot_function
 }
 
@@ -624,7 +625,7 @@ function Cleanup() {
 
 function summary() {
     sudo systemctl list-units --type=service --state=failed
-    echo "Your SSH Port is switched to: "$SSH_CUSTOM_PORT_NUMBER" remember that during next SSH session. ssh <user>@{server-ip-address} -p "$SSH_CUSTOM_PORT_NUMBER
+    echo "🟡 Your SSH Port is switched to: "$SSH_CUSTOM_PORT_NUMBER" remember that during next SSH session. ssh <user>@{server-ip-address} -p "$SSH_CUSTOM_PORT_NUMBER "🟡"
 }
 
 function reboot_function() {
