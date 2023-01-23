@@ -11,10 +11,11 @@ GREEN='\033[0;32m'
 BLUE='\033[0;34m'
 PURPLE='\033[0;35m'
 CYAN='\033[0;36m'
+PINK='\033[0;35m'
 
 function main() {
     Welcome
-    whiptail --title "Information" --msgbox "If you are running this script on a fresh instance of Raspberry Pi, consider running 'sudo apt-get update && sudo apt-get upgrade' followed by a reboot before running the installation script. If your system is already up to date, you can proceed with the installation." 10 60
+    whiptail --title "Information" --msgbox "If you are running this script on a fresh instance of Raspberry Pi, consider running 'sudo apt-get update && sudo apt-get upgrade' followed by a reboot before running the installation script." 10 60
     #&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
     #VARIABLES
     HOST_IP_ADDRESS=$(hostname -I | awk '{print $1}')
@@ -40,32 +41,32 @@ function main() {
     sleep 5
     check_device_info
     start_time=$(date +%s)
-    Update
-    snort
-    docker_installer
-    yacht_installer
+    Update || echo "${RED}Update has failed ❌${RED}"
+    snort || echo "${RED}Snort installation has failed ❌${RED}"
+    docker_installer || echo "${RED}Dokcer installation has failed ❌${RED}"
+    yacht_installer || echo "${RED}Yacht installation has failed ❌${RED}"
     sudo docker update --restart unless-stopped $(sudo docker ps -q)
-    grafana_installer
-    prometheus_installer
-    node_exporter_installer
-    loki_installer
-    promtail_installer
-    mail_setup
-    fail2ban_installer
-    ClamAV_installer
-    AuditD_installer
-    Rkhunter_installer
-    #Honeypot_installer
-    Lynis_installer
-    Docker_Bench_Installer
-    OS_Hardening
-    Kernel_Hardening
+    grafana_installer || echo "${RED}Grafana installation has failed ❌${RED}"
+    prometheus_installer || echo "${RED}Prometheus installation has failed ❌${RED}"
+    node_exporter_installer || echo "${RED}Node Exporter installation has failed ❌${RED}"
+    loki_installer || echo "${RED}Loki installation has failed ❌${RED}"
+    promtail_installer || echo "${RED}Promtail installation has failed ❌${RED}"
+    mail_setup || echo "${RED}Setting up mail installation has failed ❌${RED}"
+    fail2ban_installer || echo "${RED}Fail2ban installation has failed ❌${RED}"
+    ClamAV_installer || echo "${RED}ClamAV installation has failed ❌${RED}"
+    AuditD_installer|| echo "${RED}AuditD installation has failed ❌${RED}"
+    Rkhunter_installer|| echo "${RED}Rkhunter installation has failed ❌${RED}"
+    #Honeypot_installer || echo "${RED}Setting up Honeypot has failed ❌${RED}"
+    Lynis_installer || echo "${RED}Lynis installation has failed ❌${RED}"
+    Docker_Bench_Installer || echo "${RED}Docker Bench installation has failed ❌${RED}"
+    OS_Hardening || echo "${RED}OS Hardening has failed ❌${RED}"
+    Kernel_Hardening || echo "${RED}Kernel hardening has failed ❌${RED}"
     sudo apt-get install aha -y
     echo q | crontab -e
     echo "Setting up additional scripts 📜"
-    DDOS_Mail_Setup
-    High_RAM_Mail_Setup
-    Cleanup
+    DDOS_Mail_Setup || echo "${RED}Setting DDos mail script has failed ❌${RED}"
+    High_RAM_Mail_Setup || echo "${RED}Setting High RAM notification mail script has failed ❌${RED}"
+    Cleanup || echo "${RED}Cleanup function has failed ❌${RED}"
     summary
     end_time=$(date +%s)
     elapsed_time=$((end_time - start_time))
@@ -143,9 +144,9 @@ function check_device_info() {
 }
 
 function snort() {
-    echo "Installing snort 🐖"
+    echo "${PINK}Installing snort${PINK}🐖"
     sudo apt-get update && sudo apt-get upgrade -y
-    sudo apt-get install snort -y && echo "\n"
+    echo "\n" | sudo apt-get install snort -y
     sudo systemctl enable snort
     sudo chmod 766 /etc/snort/rules/local.rules
     sudo sed -i 's/ipvar HOME_NET any/ipvar HOME_NET '$HOST_IP_ADDRESS'/' /etc/snort/snort.conf
@@ -157,7 +158,7 @@ function snort() {
 }
 
 function docker_installer() {
-    echo "Installing docker 🐋"
+    echo "${BLUE}Installing docker${BLUE}🐋"
     sudo apt-get -y install ca-certificates curl gnupg lsb-release
     sudo mkdir -p /etc/apt/keyrings
     sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
@@ -169,7 +170,7 @@ function docker_installer() {
 }
 
 function nextcloud_installer() {
-    echo "Installing Nextcloud ☁️"
+    echo "${CYAN}Installing Nextcloud${CYAN}☁️"
     docker pull nextcloud
     docker pull postgres
     sudo docker network create --driver bridge nextcloud-net
@@ -185,7 +186,7 @@ function yacht_installer() {
 }
 
 function grafana_installer() {
-    echo "Installing Grafana 🌞"
+    echo "${YELLOW}Installing Grafana${YELLOW}🌞"
     sudo wget -qO /etc/apt/trusted.gpg.d/grafana.asc https://packages.grafana.com/gpg.key
     echo "deb https://packages.grafana.com/oss/deb stable main" | sudo tee /etc/apt/sources.list.d/grafana.list
     sudo apt update
@@ -197,7 +198,7 @@ function grafana_installer() {
 }
 
 function prometheus_installer() {
-    echo "Installing Prometheus 🔥"
+    echo "${ORANGE}Installing Prometheus${ORANGE}🔥"
     sudo mkdir /etc/prometheus
     sudo useradd --no-create-home --shell /bin/false prometheus
     sudo mkdir /var/lib/prometheus
@@ -339,7 +340,7 @@ WantedBy=multi-user.target
 }
 
 function fail2ban_installer() {
-    echo "Installing Fail2Ban 🚫"
+    echo "${GREEN}Installing Fail2Ban${GREEN} 🚫"
     sudo apt-get -y install fail2ban sendmail
     sudo cp /etc/fail2ban/fail2ban.conf /etc/fail2ban/fail2ban.local
     sudo cp /etc/fail2ban/jail.conf /etc/fail2ban/jail.local
@@ -353,7 +354,7 @@ function fail2ban_installer() {
 }
 
 function ClamAV_installer() {
-    echo "Installing ClamAV - Antivirus 👾"
+    echo "${RED}Installing ClamAV - Antivirus${RED}👾"
     sudo apt-get -y install clamav clamav-daemon
     sudo systemctl stop clamav-freshclam
     sudo freshclam || wget https://database.clamav.net/daily.cvd
@@ -380,10 +381,12 @@ AuthPass="$E_MAIL_PASSWORD"
 FromLineOverride=YES
 UseTLS=YES
     " | sudo tee /etc/ssmtp/ssmtp.conf /dev/null 2>&1
+    
+    sudo systemctl daemon-reload
 }
 
 function AuditD_installer() {
-    echo "Installing AuditD 👓"
+    echo "${PURPLE}Installing AuditD${PURPLE}👓"
     sudo apt install auditd expect -y
     sudo rm /etc/audit/rules.d/audit.rules
     sudo wget https://raw.githubusercontent.com/Neo23x0/auditd/master/audit.rules -P /etc/audit/rules.d/
@@ -396,7 +399,7 @@ function AuditD_installer() {
 }
 
 function Rkhunter_installer() {
-    echo "Installing Rkhunter - rootkit check engine 🕵️‍♂️"
+    echo "${PINK}Installing Rkhunter - rootkit check engine{$PINK}🕵️‍♂️"
     sudo apt install rkhunter -y
     sudo rkhunter --check --skip-keypress
     sudo cat /var/log/rkhunter.log > rkhunter_report.txt
@@ -406,7 +409,7 @@ function Rkhunter_installer() {
 }
 
 function Honeypot_installer() {
-    echo "Setting up Honeypot 🐝"
+    echo "${YELLOW}Setting up Honeypot${YELLOW}🐝"
     git clone https://github.com/adambaczkowski/RaspberryPi-Honeypot
     cd RaspberryPi-Honeypot
     sudo chmod +x install.sh
@@ -416,7 +419,7 @@ function Honeypot_installer() {
 
 
 function Lynis_installer() {
-    echo "Installing Lunis - System security audit 🎯"
+    echo "${GREEN}Installing Lynis - System security audit${GREEN}🎯"
     sudo apt install lynis mpack -y
     sudo lynis audit system
     sudo cat /var/log/lynis.log > lynis_log.txt
@@ -426,7 +429,7 @@ function Lynis_installer() {
 }
 
 function Docker_Bench_Installer() {
-    echo "Installing DockerBench - Docker containers security audit 📦"
+    echo "${BLUE}Installing DockerBench - Docker containers security audit${BLUE}📦"
     git clone https://github.com/docker/docker-bench-security.git
     cd docker-bench-security
     sudo ./docker-bench-security.sh > ~/docker_audit.txt
@@ -505,47 +508,46 @@ function Kernel_Hardening() {
     sudo sysctl fs.protected_regular=2
     
     # Turn off unnecesary kernel modules
-    sudo echo 'dccp /bin/false' >> /etc/modprobe.d/dccp.conf
-    sudo echo 'sctp /bin/false' >> /etc/modprobe.d/dccp.conf
-    sudo echo 'rds /bin/false' >> /etc/modprobe.d/dccp.conf
-    sudo echo 'tipc /bin/false' >> /etc/modprobe.d/dccp.conf
-    sudo echo 'n-hdlc /bin/false' >> /etc/modprobe.d/dccp.conf
-    sudo echo 'ax25 /bin/false' >> /etc/modprobe.d/dccp.conf
-    sudo echo 'netrom /bin/false' >> /etc/modprobe.d/dccp.conf
-    sudo echo 'x25 /bin/false' >> /etc/modprobe.d/dccp.conf
-    sudo echo 'rose /bin/false' >> /etc/modprobe.d/dccp.conf
-    sudo echo 'decnet /bin/false' >> /etc/modprobe.d/dccp.conf
-    sudo echo 'econet /bin/false' >> /etc/modprobe.d/dccp.conf
-    sudo echo 'af_802154 /bin/false' >> /etc/modprobe.d/dccp.conf
-    sudo echo 'ipx /bin/false' >> /etc/modprobe.d/dccp.conf
-    sudo echo 'appletalk /bin/false' >> /etc/modprobe.d/dccp.conf
-    sudo echo 'psnap /bin/false' >> /etc/modprobe.d/dccp.conf
-    sudo echo 'p8023 /bin/false' >> /etc/modprobe.d/dccp.conf
-    sudo echo 'p8022 /bin/false' >> /etc/modprobe.d/dccp.conf
-    sudo echo 'can /bin/false' >> /etc/modprobe.d/dccp.conf
-    sudo echo 'atm /bin/false' >> /etc/modprobe.d/dccp.conf
-    sudo echo 'cramfs /bin/false' >> /etc/modprobe.d/dccp.conf
-    sudo echo 'freevxfs /bin/false' >> /etc/modprobe.d/dccp.conf
-    sudo echo 'jffs2 /bin/false' >> /etc/modprobe.d/dccp.conf
-    sudo echo 'hfs /bin/false' >> /etc/modprobe.d/dccp.conf
-    sudo echo 'hfsplus /bin/false' >> /etc/modprobe.d/dccp.conf
-    sudo echo 'squashfs /bin/false' >> /etc/modprobe.d/dccp.conf
-    sudo echo 'udf /bin/false' >> /etc/modprobe.d/dccp.conf
-    sudo echo 'cifs /bin/true' >> /etc/modprobe.d/dccp.conf
-    sudo echo 'nfs /bin/true' >> /etc/modprobe.d/dccp.conf
-    sudo echo 'nfsv3 /bin/true' >> /etc/modprobe.d/dccp.conf
-    sudo echo 'nfsv4 /bin/true' >> /etc/modprobe.d/dccp.conf
-    sudo echo 'ksmbd /bin/true' >> /etc/modprobe.d/dccp.conf
-    sudo echo 'gfs2 /bin/true' >> /etc/modprobe.d/dccp.conf
-    sudo echo 'bluetooth /bin/false' >> /etc/modprobe.d/dccp.conf
-    sudo echo 'btusb /bin/false' >> /etc/modprobe.d/dccp.conf
-    sudo echo 'uvcvideo /bin/false' >> /etc/modprobe.d/dccp.conf
+    sudo echo 'dccp /bin/false' >> /etc/modprobe.d
+    sudo echo 'sctp /bin/false' >> /etc/modprobe.d
+    sudo echo 'rds /bin/false' >> /etc/modprobe.d
+    sudo echo 'tipc /bin/false' >> /etc/modprobe.d
+    sudo echo 'n-hdlc /bin/false' >> /etc/modprobe.d
+    sudo echo 'ax25 /bin/false' >> /etc/modprobe.d
+    sudo echo 'netrom /bin/false' >> /etc/modprobe.d
+    sudo echo 'x25 /bin/false' >> /etc/modprobe.d
+    sudo echo 'rose /bin/false' >> /etc/modprobe.d
+    sudo echo 'decnet /bin/false' >> /etc/modprobe.d
+    sudo echo 'econet /bin/false' >> /etc/modprobe.d
+    sudo echo 'af_802154 /bin/false' >> /etc/modprobe.d
+    sudo echo 'ipx /bin/false' >> /etc/modprobe.d
+    sudo echo 'appletalk /bin/false' >> /etc/modprobe.d
+    sudo echo 'psnap /bin/false' >> /etc/modprobe.d
+    sudo echo 'p8023 /bin/false' >> /etc/modprobe.d
+    sudo echo 'p8022 /bin/false' >> /etc/modprobe.d
+    sudo echo 'can /bin/false' >> /etc/modprobe.d
+    sudo echo 'atm /bin/false' >> /etc/modprobe.d
+    sudo echo 'cramfs /bin/false' >> /etc/modprobe.d
+    sudo echo 'freevxfs /bin/false' >> /etc/modprobe.d
+    sudo echo 'jffs2 /bin/false' >> /etc/modprobe.d
+    sudo echo 'hfs /bin/false' >> /etc/modprobe.d
+    sudo echo 'hfsplus /bin/false' >> /etc/modprobe.d
+    sudo echo 'squashfs /bin/false' >> /etc/modprobe.d
+    sudo echo 'udf /bin/false' >> /etc/modprobe.d
+    sudo echo 'cifs /bin/true' >> /etc/modprobe.d
+    sudo echo 'nfs /bin/true' >> /etc/modprobe.d
+    sudo echo 'nfsv3 /bin/true' >> /etc/modprobe.d
+    sudo echo 'nfsv4 /bin/true' >> /etc/modprobe.d
+    sudo echo 'ksmbd /bin/true' >> /etc/modprobe.d
+    sudo echo 'gfs2 /bin/true' >> /etc/modprobe.d
+    sudo echo 'bluetooth /bin/false' >> /etc/modprobe.d
+    sudo echo 'btusb /bin/false' >> /etc/modprobe.d
+    sudo echo 'uvcvideo /bin/false' >> /etc/modprobe.d
     rfkill block all
-    
 }
 
 function Firewall() {
-    echo "Setting up Firewall 🔥"
+    echo "${ORANGE}Setting up Firewall 🔥${ORANGE}"
     echo "y" | sudo ufw enable
     sudo ufw allow ssh
     sudo ufw allow 80
@@ -611,7 +613,7 @@ if [ $(echo "$RAM_USAGE > $THRESHOLD" | bc) -eq 1 ]; then
 
 function Cleanup() {
     cd ~/
-    echo "Cleaning home directory..."
+    echo "Cleaning home directory...🧹"
     sudo rm prometheus-2.41.0.linux-arm64.tar.gz
     sudo rm node_exporter-1.5.0.linux-arm64.tar.gz
     sudo rm loki-linux-arm64.zip
