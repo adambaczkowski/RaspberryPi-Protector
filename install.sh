@@ -14,6 +14,7 @@ CYAN='\033[0;36m'
 PINK='\033[0;35m'
 
 function main() {
+    sudo sed -i 's/#force_color_prompt=yes/force_color_prompt=yes/' ~/.bashrc
     Welcome
     whiptail --title "Information" --msgbox "If you are running this script on a fresh instance of Raspberry Pi, consider running 'sudo apt-get update && sudo apt-get upgrade' followed by a reboot before running the installation script." 10 60
     #&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
@@ -32,11 +33,13 @@ function main() {
     SSH_CUSTOM_PORT_NUMBER=$(whiptail --inputbox "Enter your custom SSH port number between 1024 and 65536 :" 8 78 --title "SSH Port" 3>&1 1>&2 2>&3)
     if [[ $SSH_CUSTOM_PORT_NUMBER -eq 22 || $SSH_CUSTOM_PORT_NUMBER -eq 80 || $SSH_CUSTOM_PORT_NUMBER -eq 443 || $SSH_CUSTOM_PORT_NUMBER -eq 8080 ]]
     then
-        echo "Invalid port number. I've chosen port 60001 for You"
-        $SSH_CUSTOM_PORT_NUMBER=60001
+        echo "Invalid port number. I've chosen port 2341 for You"
+        $SSH_CUSTOM_PORT_NUMBER=2341
     else
         echo "Custom SSH port number: $SSH_CUSTOM_PORT_NUMBER"
     fi
+    sudo sed -i 's/#Port 22/Port '$SSH_CUSTOM_PORT_NUMBER'/' /etc/ssh/sshd_config
+    sudo systemctl reload ssh
     #&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
     sleep 5
     check_device_info
@@ -76,8 +79,6 @@ function main() {
     echo "Installation took: $minutes minutes and $seconds seconds 🕑"
     reboot_function
 }
-
-
 
 function Update() {
     echo "Updating the system 🖥️"
@@ -142,12 +143,13 @@ function check_device_info() {
     echo "This device meets the requirements for installation✅"
     neofetch
     sleep 5
+    clear
 }
 
 function snort() {
     echo "${PINK}Installing snort${PINK}🐖"
     sudo apt-get update && sudo apt-get upgrade -y
-    echo "\n" | sudo apt-get install snort -y
+    sudo apt-get install snort -y &
     sudo systemctl enable snort
     sudo chmod 766 /etc/snort/rules/local.rules
     sudo sed -i 's/ipvar HOME_NET any/ipvar HOME_NET '$HOST_IP_ADDRESS'/' /etc/snort/snort.conf
@@ -370,8 +372,7 @@ function mail_setup() {
     echo "Insatlling and setting up mail 📧"
     sudo apt-get install libio-socket-ssl-perl libnet-ssleay-perl sendemail -y
     sudo apt install ssmtp enscript ghostscript mailutils mpack -y
-    chmod 640 /etc/ssmtp/ssmtp.conf
-    sudo chown root:mail /etc/ssmtp/ssmtp.conf
+    #sudo chown root:mail /etc/ssmtp/ssmtp.conf
     
     echo -n "
 root="$EMAIL"
@@ -381,9 +382,7 @@ AuthUser="$EMAIL"
 AuthPass="$EMAIL_PASSWORD"
 FromLineOverride=YES
 UseTLS=YES
-    " | sudo tee /etc/ssmtp/ssmtp.conf /dev/null 2>&1
-    
-    sudo systemctl daemon-reload
+    " | sudo tee -a /etc/ssmtp/ssmtp.conf /dev/null 2>&1
 }
 
 function AuditD_installer() {
@@ -415,7 +414,6 @@ function Honeypot_installer() {
     cd RaspberryPi-Honeypot
     sudo chmod +x install.sh
     sudo ./install.sh
-    sudo sed -i 's/#Port 22/Port '$SSH_CUSTOM_PORT_NUMBER'/' /etc/ssh/sshd_config
 }
 
 
@@ -509,48 +507,47 @@ function Kernel_Hardening() {
     sudo sysctl fs.protected_regular=2
     
     # Turn off unnecesary kernel modules
-    sudo echo 'dccp /bin/false' >> /etc/modprobe.d
-    sudo echo 'sctp /bin/false' >> /etc/modprobe.d
-    sudo echo 'rds /bin/false' >> /etc/modprobe.d
-    sudo echo 'tipc /bin/false' >> /etc/modprobe.d
-    sudo echo 'n-hdlc /bin/false' >> /etc/modprobe.d
-    sudo echo 'ax25 /bin/false' >> /etc/modprobe.d
-    sudo echo 'netrom /bin/false' >> /etc/modprobe.d
-    sudo echo 'x25 /bin/false' >> /etc/modprobe.d
-    sudo echo 'rose /bin/false' >> /etc/modprobe.d
-    sudo echo 'decnet /bin/false' >> /etc/modprobe.d
-    sudo echo 'econet /bin/false' >> /etc/modprobe.d
-    sudo echo 'af_802154 /bin/false' >> /etc/modprobe.d
-    sudo echo 'ipx /bin/false' >> /etc/modprobe.d
-    sudo echo 'appletalk /bin/false' >> /etc/modprobe.d
-    sudo echo 'psnap /bin/false' >> /etc/modprobe.d
-    sudo echo 'p8023 /bin/false' >> /etc/modprobe.d
-    sudo echo 'p8022 /bin/false' >> /etc/modprobe.d
-    sudo echo 'can /bin/false' >> /etc/modprobe.d
-    sudo echo 'atm /bin/false' >> /etc/modprobe.d
-    sudo echo 'cramfs /bin/false' >> /etc/modprobe.d
-    sudo echo 'freevxfs /bin/false' >> /etc/modprobe.d
-    sudo echo 'jffs2 /bin/false' >> /etc/modprobe.d
-    sudo echo 'hfs /bin/false' >> /etc/modprobe.d
-    sudo echo 'hfsplus /bin/false' >> /etc/modprobe.d
-    sudo echo 'squashfs /bin/false' >> /etc/modprobe.d
-    sudo echo 'udf /bin/false' >> /etc/modprobe.d
-    sudo echo 'cifs /bin/true' >> /etc/modprobe.d
-    sudo echo 'nfs /bin/true' >> /etc/modprobe.d
-    sudo echo 'nfsv3 /bin/true' >> /etc/modprobe.d
-    sudo echo 'nfsv4 /bin/true' >> /etc/modprobe.d
-    sudo echo 'ksmbd /bin/true' >> /etc/modprobe.d
-    sudo echo 'gfs2 /bin/true' >> /etc/modprobe.d
-    sudo echo 'bluetooth /bin/false' >> /etc/modprobe.d
-    sudo echo 'btusb /bin/false' >> /etc/modprobe.d
-    sudo echo 'uvcvideo /bin/false' >> /etc/modprobe.d
+    sudo echo 'dccp /bin/false' >> /etc/modprobe.d/blacklist.conf
+    sudo echo 'sctp /bin/false' >> /etc/modprobe.d/blacklist.conf
+    sudo echo 'rds /bin/false' >> /etc/modprobe.d/blacklist.conf
+    sudo echo 'tipc /bin/false' >> /etc/modprobe.d/blacklist.conf
+    sudo echo 'n-hdlc /bin/false' >> /etc/modprobe.d/blacklist.conf
+    sudo echo 'ax25 /bin/false' >> /etc/modprobe.d/blacklist.conf
+    sudo echo 'netrom /bin/false' >> /etc/modprobe.d/blacklist.conf
+    sudo echo 'x25 /bin/false' >> /etc/modprobe.d/blacklist.conf
+    sudo echo 'rose /bin/false' >> /etc/modprobe.d/blacklist.conf
+    sudo echo 'decnet /bin/false' >> /etc/modprobe.d/blacklist.conf
+    sudo echo 'econet /bin/false' >> /etc/modprobe.d/blacklist.conf
+    sudo echo 'af_802154 /bin/false' >> /etc/modprobe.d/blacklist.conf
+    sudo echo 'ipx /bin/false' >> /etc/modprobe.d/blacklist.conf
+    sudo echo 'appletalk /bin/false' >> /etc/modprobe.d/blacklist.conf
+    sudo echo 'psnap /bin/false' >> /etc/modprobe.d/blacklist.conf
+    sudo echo 'p8023 /bin/false' >> /etc/modprobe.d/blacklist.conf
+    sudo echo 'p8022 /bin/false' >> /etc/modprobe.d/blacklist.conf
+    sudo echo 'can /bin/false' >> /etc/modprobe.d/blacklist.conf
+    sudo echo 'atm /bin/false' >> /etc/modprobe.d/blacklist.conf
+    sudo echo 'cramfs /bin/false' >> /etc/modprobe.d/blacklist.conf
+    sudo echo 'freevxfs /bin/false' >> /etc/modprobe.d/blacklist.conf
+    sudo echo 'jffs2 /bin/false' >> /etc/modprobe.d/blacklist.conf
+    sudo echo 'hfs /bin/false' >> /etc/modprobe.d/blacklist.conf
+    sudo echo 'hfsplus /bin/false' >> /etc/modprobe.d/blacklist.conf
+    sudo echo 'squashfs /bin/false' >> /etc/modprobe.d/blacklist.conf
+    sudo echo 'udf /bin/false' >> /etc/modprobe.d/blacklist.conf
+    sudo echo 'cifs /bin/true' >> /etc/modprobe.d/blacklist.conf
+    sudo echo 'nfs /bin/true' >> /etc/modprobe.d/blacklist.conf
+    sudo echo 'nfsv3 /bin/true' >> /etc/modprobe.d/blacklist.conf
+    sudo echo 'nfsv4 /bin/true' >> /etc/modprobe.d/blacklist.conf
+    sudo echo 'ksmbd /bin/true' >> /etc/modprobe.d/blacklist.conf
+    sudo echo 'gfs2 /bin/true' >> /etc/modprobe.d/blacklist.conf
+    sudo echo 'bluetooth /bin/false' >> /etc/modprobe.d/blacklist.conf
+    sudo echo 'btusb /bin/false' >> /etc/modprobe.d/blacklist.conf
+    sudo echo 'uvcvideo /bin/false' >> /etc/modprobe.d/blacklist.conf
     rfkill block all
 }
 
 function Firewall() {
     echo "${ORANGE}Setting up Firewall 🔥${ORANGE}"
     echo "y" | sudo ufw enable
-    sudo ufw allow ssh
     sudo ufw allow 80
     sudo ufw allow 443
     sudo ufw allow 8080
@@ -567,6 +564,8 @@ function Firewall() {
     sudo ufw allow 3100
     sudo ufw allow 9096
     sudo ufw allow $SSH_CUSTOM_PORT_NUMBER
+    
+    ufw status numbered
 }
 
 function DDOS_Mail_Setup() {
@@ -625,6 +624,7 @@ function Cleanup() {
 
 function summary() {
     sudo systemctl list-units --type=service --state=failed
+    ufw status numbered
     echo "🟡 Your SSH Port is switched to: "$SSH_CUSTOM_PORT_NUMBER" remember that during next SSH session. ssh <user>@{server-ip-address} -p "$SSH_CUSTOM_PORT_NUMBER "🟡"
 }
 
