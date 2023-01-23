@@ -58,6 +58,8 @@ function main() {
     sleep 2
     docker_installer #|| echo -ne "${RED}Dokcer installation has failed ❌${NO_COLOR}"
     sleep 2
+    nextcloud_installer
+    sleep 2
     yacht_installer #|| echo -ne "${RED}Yacht installation has failed ❌${NO_COLOR}"
     sleep 2
     sudo docker update --restart unless-stopped $(sudo docker ps -q)
