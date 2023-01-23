@@ -13,10 +13,8 @@ PURPLE='\033[0;35m'
 CYAN='\033[0;36m'
 
 function main() {
-    echo "If you are running this script on fresh instance of Raspberry Pi consider doing update and upgrade. After this reboot your machine and then run istallation script. Otherwise you are good to go!"
-    check_device_info
-    Update
     Welcome
+    whiptail --title "Information" --msgbox "If you are running this script on a fresh instance of Raspberry Pi, consider running 'sudo apt-get update && sudo apt-get upgrade' followed by a reboot before running the installation script. If your system is already up to date, you can proceed with the installation." 10 60
     #&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
     #VARIABLES
     HOST_IP_ADDRESS=$(hostname -I | awk '{print $1}')
@@ -39,6 +37,10 @@ function main() {
         echo "Custom SSH port number: $SSH_CUSTOM_PORT_NUMBER"
     fi
     #&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+    sleep 5
+    check_device_info
+    start_time=$(date +%s)
+    Update
     snort
     docker_installer
     yacht_installer
@@ -48,6 +50,7 @@ function main() {
     node_exporter_installer
     loki_installer
     promtail_installer
+    mail_setup
     fail2ban_installer
     ClamAV_installer
     AuditD_installer
@@ -55,25 +58,32 @@ function main() {
     #Honeypot_installer
     Lynis_installer
     Docker_Bench_Installer
-    mail_setup
     OS_Hardening
     Kernel_Hardening
     sudo apt-get install aha -y
     echo q | crontab -e
+    echo "Setting up additional scripts 📜"
     DDOS_Mail_Setup
     High_RAM_Mail_Setup
     Cleanup
     summary
+    end_time=$(date +%s)
+    elapsed_time=$((end_time - start_time))
+    minutes=$((elapsed_time / 60))
+    seconds=$((elapsed_time % 60))
+    echo "Installation took: $minutes minutes and $seconds seconds ⏰"
     reboot_function
 }
 
 
 
 function Update() {
+    echo "Updating the system 🖥️"
     sudo apt update && sudo apt upgrade -y #/dev/null 2>&1
 }
 
 function Welcome() {
+    echo "Welcome to RaspberryPi Protector insatllation 👋"
     sudo apt-get install figlet -y # > /dev/null 2>&1
     figlet -f slant "Raspberry Pi Protector"
     echo -ne "
@@ -91,6 +101,7 @@ function Welcome() {
 }
 
 function check_device_info() {
+    echo "Checking device info 🔍"
     sudo apt-get install neofetch -y #> /dev/null 2>&1
     
     check_device_info_counter=0
@@ -98,41 +109,43 @@ function check_device_info() {
     # Check the amount of RAM
     ram=$(free -h | awk '/Mem:/ {print $2}' | grep -Eo '[0-9].[0-9]')
     if [ $ram -lt 3.7 ]; then
-        echo "This device does not have enough RAM (less than 4 GB)."
+        echo "This device does not have enough RAM (less than 4 GB)❌"
         let "check_device_info_counter++"
     fi
     
     # Check the Linux distribution
     distro=$(lsb_release -i | awk '{print $3}')
     if [ "$distro" != "Ubuntu" ]; then
-        echo "This device is not running an Ubuntu-based system."
+        echo "This device is not running an Ubuntu-based system❌"
         let "check_device_info_counter++"
     fi
     
     # Check the CPU architecture
     arch=$(uname -m)
     if [ "$arch" != "aarch64" ]; then
-        echo "This device does not have an ARM64 CPU."
+        echo "This device does not have an ARM64 CPU❌"
         let "check_device_info_counter++"
     fi
     
     if [ "$check_device_info_counter" -gt 0 ]; then
         result=$(whiptail --title "This device doesn't meet requirements." --yesno " Are you sure you want proceed with installation?" 8 78 3>&1 1>&2 2>&3)
         if [ $result = 0 ]; then
-            echo "Running installer, might break the system"
+            echo "This device doesn't meet the requirements for installation❌"
+            echo "Running installer, might break the system😟"
         else
             exit 1
         fi
     fi
     
-    echo "This device meets the requirements for installation"
+    echo "This device meets the requirements for installation✅"
     neofetch
-    sleep 2
+    sleep 5
 }
 
 function snort() {
+    echo "Installing snort 🐖"
     sudo apt-get update && sudo apt-get upgrade -y
-    echo q | sudo apt-get install snort -y
+    sudo apt-get install snort -y && echo "\n"
     sudo systemctl enable snort
     sudo chmod 766 /etc/snort/rules/local.rules
     sudo sed -i 's/ipvar HOME_NET any/ipvar HOME_NET '$HOST_IP_ADDRESS'/' /etc/snort/snort.conf
@@ -144,6 +157,7 @@ function snort() {
 }
 
 function docker_installer() {
+    echo "Installing docker 🐋"
     sudo apt-get -y install ca-certificates curl gnupg lsb-release
     sudo mkdir -p /etc/apt/keyrings
     sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
@@ -155,6 +169,7 @@ function docker_installer() {
 }
 
 function nextcloud_installer() {
+    echo "Installing Nextcloud ☁️"
     docker pull nextcloud
     docker pull postgres
     sudo docker network create --driver bridge nextcloud-net
@@ -163,12 +178,14 @@ function nextcloud_installer() {
 }
 
 function yacht_installer() {
+    echo "Installing Yacht ⛵"
     sudo docker volume create yacht
     docker pull selfhostedpro/yacht
     sudo docker run -d -p 8000:8000 -v /var/run/docker.sock:/var/run/docker.sock -v yacht:/config --name yacht selfhostedpro/yacht
 }
 
 function grafana_installer() {
+    echo "Installing Grafana 🌞"
     sudo wget -qO /etc/apt/trusted.gpg.d/grafana.asc https://packages.grafana.com/gpg.key
     echo "deb https://packages.grafana.com/oss/deb stable main" | sudo tee /etc/apt/sources.list.d/grafana.list
     sudo apt update
@@ -180,6 +197,7 @@ function grafana_installer() {
 }
 
 function prometheus_installer() {
+    echo "Installing Prometheus 🔥"
     sudo mkdir /etc/prometheus
     sudo useradd --no-create-home --shell /bin/false prometheus
     sudo mkdir /var/lib/prometheus
@@ -227,6 +245,7 @@ WantedBy=multi-user.target
 }
 
 function node_exporter_installer() {
+    echo "Installing node exporter ⚙️"
     wget https://github.com/prometheus/node_exporter/releases/download/v1.5.0/node_exporter-1.5.0.linux-arm64.tar.gz
     tar vxfz node_exporter-1.5.0.linux-arm64.tar.gz
     sudo useradd -m node_exporter
@@ -256,6 +275,7 @@ WantedBy=multi-user.target
 }
 
 function loki_installer() {
+    echo "Installing Loki 🧭"
     sudo apt install unzip -y
     wget https://github.com/grafana/loki/releases/download/v2.7.1/loki-linux-arm64.zip
     unzip loki-linux-arm64.zip
@@ -286,6 +306,7 @@ WantedBy=multi-user.target
 }
 
 function promtail_installer() {
+    echo "Installing Promtail 🪁"
     wget https://github.com/grafana/loki/releases/download/v2.7.1/promtail-linux-arm64.zip
     unzip promtail-linux-arm64.zip
     sudo mkdir /opt/promtail
@@ -318,6 +339,7 @@ WantedBy=multi-user.target
 }
 
 function fail2ban_installer() {
+    echo "Installing Fail2Ban 🚫"
     sudo apt-get -y install fail2ban sendmail
     sudo cp /etc/fail2ban/fail2ban.conf /etc/fail2ban/fail2ban.local
     sudo cp /etc/fail2ban/jail.conf /etc/fail2ban/jail.local
@@ -331,6 +353,7 @@ function fail2ban_installer() {
 }
 
 function ClamAV_installer() {
+    echo "Installing ClamAV - Antivirus 👾"
     sudo apt-get -y install clamav clamav-daemon
     sudo systemctl stop clamav-freshclam
     sudo freshclam || wget https://database.clamav.net/daily.cvd
@@ -341,46 +364,8 @@ function ClamAV_installer() {
     #sudo clamscan --infected --recursive --remove /
 }
 
-function AuditD_installer() {
-    sudo apt install auditd expect -y
-    sudo rm /etc/audit/rules.d/audit.rules
-    sudo wget https://raw.githubusercontent.com/Neo23x0/auditd/master/audit.rules -P /etc/audit/rules.d/
-    sudo service auditd start
-    sudo systemctl enable auditd.service
-    sudo aureport --summary > AuditD_Report.txt
-    enscript AuditD_Report.txt --output=- | ps2pdf - > AuditD_Report.pdf
-    mpack -s "AuditD Report summary" -a AuditD_Report.pdf $E_MAIL
-    rm AuditD_Report.txt AuditD_Report.pdf
-}
-
-function Rkhunter_installer() {
-    sudo apt install rkhunter -y
-    sudo rkhunter --check --skip-keypress
-    sudo cat /var/log/rkhunter.log > rkhunter_report.txt
-    enscript rkhunter_report.txt --output=- | ps2pdf - > rkhunter_report.pdf
-    mpack -s "Rkhuner log report" -a rkhunter_report.pdf $E_MAIL
-    rm rkhunter_report.txt rkhunter_report.pdf
-}
-
-function Honeypot_installer() {
-    git clone https://github.com/adambaczkowski/RaspberryPi-Honeypot
-    cd RaspberryPi-Honeypot
-    sudo chmod +x install.sh
-    sudo ./install.sh
-    sudo sed -i 's/#Port 22/Port '$SSH_CUSTOM_PORT_NUMBER'/' /etc/ssh/sshd_config
-}
-
-
-function Lynis_installer() {
-    sudo apt install lynis mpack -y
-    sudo lynis audit system
-    sudo cat /var/log/lynis.log > lynis_log.txt
-    enscript lynis_log.txt --output=- | ps2pdf - > lynis_log.pdf
-    mpack -s "Lynis system audit" -a lynis_log.pdf $E_MAIL
-    rm lynis_log.txt lynis_log.pdf
-}
-
 function mail_setup() {
+    echo "Insatlling and setting up mail 📧"
     sudo apt-get install libio-socket-ssl-perl libnet-ssleay-perl sendemail -y
     sudo apt install ssmtp enscript ghostscript mailutils mpack -y
     chmod 640 /etc/ssmtp/ssmtp.conf
@@ -397,7 +382,51 @@ UseTLS=YES
     " | sudo tee /etc/ssmtp/ssmtp.conf /dev/null 2>&1
 }
 
+function AuditD_installer() {
+    echo "Installing AuditD 👓"
+    sudo apt install auditd expect -y
+    sudo rm /etc/audit/rules.d/audit.rules
+    sudo wget https://raw.githubusercontent.com/Neo23x0/auditd/master/audit.rules -P /etc/audit/rules.d/
+    sudo service auditd start
+    sudo systemctl enable auditd.service
+    sudo aureport --summary > AuditD_Report.txt
+    enscript AuditD_Report.txt --output=- | ps2pdf - > AuditD_Report.pdf
+    mpack -s "AuditD Report summary" -a AuditD_Report.pdf $E_MAIL
+    rm AuditD_Report.txt AuditD_Report.pdf
+}
+
+function Rkhunter_installer() {
+    echo "Installing Rkhunter - rootkit check engine 🕵️‍♂️"
+    sudo apt install rkhunter -y
+    sudo rkhunter --check --skip-keypress
+    sudo cat /var/log/rkhunter.log > rkhunter_report.txt
+    enscript rkhunter_report.txt --output=- | ps2pdf - > rkhunter_report.pdf
+    mpack -s "Rkhuner log report" -a rkhunter_report.pdf $E_MAIL
+    rm rkhunter_report.txt rkhunter_report.pdf
+}
+
+function Honeypot_installer() {
+    echo "Setting up Honeypot 🐝"
+    git clone https://github.com/adambaczkowski/RaspberryPi-Honeypot
+    cd RaspberryPi-Honeypot
+    sudo chmod +x install.sh
+    sudo ./install.sh
+    sudo sed -i 's/#Port 22/Port '$SSH_CUSTOM_PORT_NUMBER'/' /etc/ssh/sshd_config
+}
+
+
+function Lynis_installer() {
+    echo "Installing Lunis - System security audit 🎯"
+    sudo apt install lynis mpack -y
+    sudo lynis audit system
+    sudo cat /var/log/lynis.log > lynis_log.txt
+    enscript lynis_log.txt --output=- | ps2pdf - > lynis_log.pdf
+    mpack -s "Lynis system audit" -a lynis_log.pdf $E_MAIL
+    rm lynis_log.txt lynis_log.pdf
+}
+
 function Docker_Bench_Installer() {
+    echo "Installing DockerBench - Docker containers security audit 📦"
     git clone https://github.com/docker/docker-bench-security.git
     cd docker-bench-security
     sudo ./docker-bench-security.sh > ~/docker_audit.txt
@@ -408,6 +437,7 @@ function Docker_Bench_Installer() {
 }
 
 function OS_Hardening() {
+    echo "Perofrming OS hardening 🔒"
     echo "Disabling Wi-Fi"
     sudo apt install rfkill -y
     sudo rfkill block 1
@@ -420,6 +450,7 @@ function OS_Hardening() {
 }
 
 function Kernel_Hardening() {
+    echo "Perofrming Kernel hardening 🔒"
     #https://madaidans-insecurities.github.io/guides/linux-hardening.html
     
     #Kernel self-protection
@@ -514,7 +545,7 @@ function Kernel_Hardening() {
 }
 
 function Firewall() {
-    echo "Setting Firewall..."
+    echo "Setting up Firewall 🔥"
     echo "y" | sudo ufw enable
     sudo ufw allow ssh
     sudo ufw allow 80
