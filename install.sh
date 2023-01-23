@@ -200,10 +200,12 @@ function docker_installer() {
     echo -ne "\n${BLUE}Installing docker${NO_COLOR}🐋\n"
     sudo apt-get remove docker docker-engine docker.io containerd runc -y
     sudo apt-get update
-    sudo apt-get install ca-certificates curl gnupg lsb-release -y
+    sudo apt-get install ca-certificates curl gnupg lsb-release lsb-core -y
     sudo mkdir -p /etc/apt/keyrings
     curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-    echo -ne "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu$(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+    echo \
+    "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+    $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
     sudo apt-get update
     sudo apt-get install docker-ce docker-ce-cli containerd.io docker-compose-plugin -y
     sudo systemctl daemon-reload
@@ -452,8 +454,25 @@ function Rkhunter_installer() {
 }
 
 function Honeypot_installer() {
-    echo -ne "\n${YELLOW}Setting up Honeypot${NO_COLOR}🐝\n"
-    
+    echo -ne "\n${YELLOW}Installing Honeypot - rootkit check engine{$NO_COLOR}🐝\n"
+    sudo apt-get install git python3-virtualenv libssl-dev libffi-dev build-essential libpython3-dev python3-minimal authbind python3-venv -y
+    git clone https://github.com/adambaczkowski/cowrie
+    cd cowrie
+    python3 -m venv cowrie-env
+    source cowrie-env/bin/activate
+    python3 -m pip install --upgrade pip
+    python3 -m pip install --upgrade -r requirements.txt
+    bin/cowrie start
+    sudo iptables -t nat -A PREROUTING -p tcp --dport 22 -j REDIRECT --to-port 2222
+    sudo iptables -t nat -A PREROUTING -p tcp --dport 22 -j REDIRECT --to-port 2222
+    setcap cap_net_bind_service=+ep /usr/bin/python3
+    etc/cowrie.cfg
+    cd
+    sudo cp ~/cowrie/docs/systemd/etc/systemd/system/cowrie.socket /etc/systemd/system
+    sudo cp ~/cowrie/docs/systemd/etc/systemd/system/cowrie.service /etc/systemd/system
+    sudo systemctl daemon-reload
+    sudo systemctl enable cowrie.service
+    sudo systemctl start cowrie.service
 }
 
 function Lynis_installer() {
@@ -478,7 +497,7 @@ function Docker_Bench_Installer() {
 }
 
 function OS_Hardening() {
-    echo "\nPerofrming OS hardening 🔒\n"
+    echo "\nPerforming OS hardening 🔒\n"
     echo "Disabling Wi-Fi"
     sudo apt install rfkill -y
     sudo rfkill block 1
@@ -491,7 +510,7 @@ function OS_Hardening() {
 }
 
 function Kernel_Hardening() {
-    echo -ne "\nPerofrming Kernel hardening 🔒\n"
+    echo -ne "\nPerforming Kernel hardening 🔒\n"
     #https://madaidans-insecurities.github.io/guides/linux-hardening.html
     
     #Kernel self-protection
@@ -596,6 +615,7 @@ function Firewall() {
     sudo ufw allow 9100
     sudo ufw allow 3100
     sudo ufw allow 9096
+    sudo ufw allow 2222
     sudo ufw allow $SSH_CUSTOM_PORT_NUMBER
 }
 
