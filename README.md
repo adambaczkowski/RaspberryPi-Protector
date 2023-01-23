@@ -15,7 +15,7 @@ Project is created with:
 ## Setup
 If You want to run this project on freshly installed Ubuntu do full system update and upgrade and reboot your device:
 ```
-$ sudo apt upgrade && sudo apt upgrade -y && sudo reboot
+$ sudo apt update && sudo apt upgrade -y && sudo reboot
 ```
 After rebooting download insatllation script:
 ```
