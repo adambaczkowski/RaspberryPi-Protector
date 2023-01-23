@@ -15,15 +15,15 @@ Project is created with:
 ## Setup
 If You want to run this project on freshly installed Ubuntu do full system update and upgrade and reboot your device:
 ```
-$ sudo apt update && sudo apt upgrade -y && sudo reboot
+sudo apt update && sudo apt upgrade -y && sudo reboot
 ```
 After rebooting download insatllation script:
 ```
-$ wget https://raw.githubusercontent.com/adambaczkowski/RaspberryPi-Protector/main/protector_installer.sh
+wget https://raw.githubusercontent.com/adambaczkowski/RaspberryPi-Protector/main/protector_installer.sh
 ```
 Change permissions using:
 ```
-$ sudo chmod +x protector_installer.sh
+sudo chmod +x protector_installer.sh
 ```
 Execute script:
 ```
