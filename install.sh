@@ -28,7 +28,6 @@ function main() {
     #GRAFANA_PASSWORD=$(whiptail --passwordbox "Enter your Grafana password:" 8 78 --title "Grafana Password" 3>&1 1>&2 2>&3)
     #NEXTCLOUD_LOGIN=$(whiptail --inputbox "Enter your Nextcloud login:" 8 78 --title "Nextcloud Login" 3>&1 1>&2 2>&3)
     #NEXTCLOUD_PASSWORD=$(whiptail --passwordbox "Enter your Nextcloud password:" 8 78 --title "Nextcloud Password" 3>&1 1>&2 2>&3)
-    NEXTCLOUD_DB_PASSWORD=$(whiptail --passwordbox "Enter your Nextcloud Database password:" 8 78 --title "Nextcloud Database Password" 3>&1 1>&2 2>&3)
     OINKCODE=$(whiptail --inputbox "Enter your Oinkcode for Snort. If you don't have Snort account, please register at https://www.snort.org/users/sign_in in order to get newest Snort ules:" 8 78 --title "Snort Oinkcode" 3>&1 1>&2 2>&3)
     SSH_CLIENT_IP=$(echo -ne $SSH_CLIENT | awk '{ print $1}')
     SSH_CUSTOM_PORT_NUMBER=$(whiptail --inputbox "Enter your custom SSH port number between 1024 and 65536 :" 8 78 --title "SSH Port" 3>&1 1>&2 2>&3)
@@ -42,11 +41,12 @@ function main() {
         echo "Invalid port number. I've chosen port 2341 for You"
         SSH_CUSTOM_PORT_NUMBER=2341
     else
-        echo "Custom SSH port number: "$SSH_CUSTOM_PORT_NUMBER
+        echo "Custom SSH port number: $SSH_CUSTOM_PORT_NUMBER"
     fi
     
     sudo sed -i 's/#Port 22/Port '$SSH_CUSTOM_PORT_NUMBER'/' /etc/ssh/sshd_config
     sudo systemctl reload ssh
+    sudo systemctl restart ssh
     #&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
     sleep 5
     check_device_info
@@ -89,13 +89,13 @@ function main() {
     sleep 2
     Rkhunter_installer #|| echo -ne "\n${RED}Rkhunter installation has failed ❌${NO_COLOR}\n"
     sleep 2
-    #Honeypot_installer || echo -ne "\n${RED}Setting up Honeypot has failed ❌${NO_COLOR}\n"
-    sleep 2
     Lynis_installer #|| echo -ne "\n${RED}Lynis installation has failed ❌${NO_COLOR}\n"
     sleep 2
     Docker_Bench_Installer #|| echo -ne "\n${RED}Docker Bench installation has failed ❌${NO_COLOR}\n"
     sleep 2
     Firewall
+    sleep 2
+    Honeypot_installer #|| echo -ne "\n${RED}Setting up Honeypot has failed ❌${NO_COLOR}\n"
     sleep 2
     echo q | crontab -e
     echo -ne "\nSetting up additional scripts 📜\n"
@@ -126,7 +126,7 @@ function Update() {
 }
 
 function Welcome() {
-    echo -ne "\nWelcome to RaspberryPi Protector installation 👋\n"
+    echo -ne "\nWelcome to RaspberryPi Protector insatllation 👋\n"
     sudo apt-get install figlet -y # > /dev/null 2>&1
     figlet -f slant "Raspberry Pi Protector"
     echo -n "
@@ -183,6 +183,9 @@ function check_device_info() {
     sleep 5
     clear
 }
+function rsyslog_installer() {
+    sudo apt-get install -y rsyslog
+}
 
 function snort() {
     echo -ne "\n${PINK} Installing snort${NO_COLOR}🐖\n"
@@ -218,10 +221,8 @@ function docker_installer() {
 function nextcloud_installer() {
     echo -ne "\n${CYAN}Installing Nextcloud${NO_COLOR}☁️\n"
     docker pull nextcloud
-    docker pull postgres
     sudo docker network create --driver bridge nextcloud-net
-    sudo docker run --name postgres -v /home/pi/nextcloud-db:/var/lib/postgresql/data -e POSTGRES_PASSWORD=$NEXTCLOUD_DB_PASSWORD --network nextcloud-net -d postgres
-    sudo docker run --name nextcloud -d -p 8080:80 -v /home/pi/nextcloud:/var/www/html --network nextcloud-net
+    sudo docker run --name nextcloud -d -p 8080:80 -v /home/pi/nextcloud:/var/www/html --network nextcloud-net nextcloud
     sudo systemctl daemon-reload
 }
 
@@ -607,8 +608,6 @@ function Firewall() {
     sudo ufw allow 8080
     sudo ufw allow 8000
     sudo ufw allow 587
-    sudo ufw allow 110
-    sudo ufw allow 995
     sudo ufw allow 143
     sudo ufw allow 993
     sudo ufw allow 3000
