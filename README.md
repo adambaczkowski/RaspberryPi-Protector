@@ -5,12 +5,7 @@
 * [Setup](#setup)
 
 ## General info
-This project is an Bash installer which installs and sets up different programs in order to secure Nextcloud instance. The script was made and tested on Ubuntu 64bit 22.10 ARM64
-	
-## Technologies used in project
-Project is created with:
-* Bash
-* Python
+This project is Bash installer which installs and sets up different programs in order to secure Nextcloud instance. The script was made and tested on Ubuntu 64bit 22.10 ARM64
 	
 ## Setup
 If You want to run this project on freshly installed Ubuntu do full system update and upgrade and reboot your device:
@@ -29,3 +24,5 @@ Execute script:
 ```
 ./protector_installer.sh
 ```
+
+
