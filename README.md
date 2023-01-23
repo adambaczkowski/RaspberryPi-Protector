@@ -14,15 +14,15 @@ sudo apt update && sudo apt upgrade -y && sudo reboot
 ```
 After rebooting download insatllation script:
 ```
-wget https://raw.githubusercontent.com/adambaczkowski/RaspberryPi-Protector/main/protector_installer.sh
+wget https://raw.githubusercontent.com/adambaczkowski/RaspberryPi-Protector/main/install.sh
 ```
 Change permissions using:
 ```
-sudo chmod +x protector_installer.sh
+sudo chmod +x install.sh
 ```
 Execute script:
 ```
-./protector_installer.sh
+./install.sh
 ```
 
 
