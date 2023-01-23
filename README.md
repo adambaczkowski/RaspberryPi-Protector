@@ -5,8 +5,7 @@
 * [Setup](#setup)
 
 ## General info
-This project is an Bash installer which installs and sets up different programms in order to secure Nextcloud instance.
-The script was made and testet on Ubuntu 64bit 22.10 ARM64
+This project is an Bash installer which installs and sets up different programs in order to secure Nextcloud instance. The script was made and tested on Ubuntu 64bit 22.10 ARM64
 	
 ## Technologies used in project
 Project is created with:
