@@ -42,7 +42,7 @@ function main() {
         echo "Invalid port number. I've chosen port 2341 for You"
         SSH_CUSTOM_PORT_NUMBER=2341
     else
-        echo "Custom SSH port number: $SSH_CUSTOM_PORT_NUMBER"
+        echo "Custom SSH port number: "$SSH_CUSTOM_PORT_NUMBER
     fi
     
     sudo sed -i 's/#Port 22/Port '$SSH_CUSTOM_PORT_NUMBER'/' /etc/ssh/sshd_config
@@ -124,7 +124,7 @@ function Update() {
 }
 
 function Welcome() {
-    echo -ne "\nWelcome to RaspberryPi Protector insatllation 👋\n"
+    echo -ne "\nWelcome to RaspberryPi Protector installation 👋\n"
     sudo apt-get install figlet -y # > /dev/null 2>&1
     figlet -f slant "Raspberry Pi Protector"
     echo -n "
