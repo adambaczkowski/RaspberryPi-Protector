@@ -14,7 +14,7 @@ CYAN='\033[0;36m'
 PINK='\033[0;35m'
 
 function main() {
-    sudo sed -i 's/#force_color_prompt=yes/force_color_prompt=yes/' ~/.bashrc
+    enable_colors
     Welcome
     whiptail --title "Information" --msgbox "If you are running this script on a fresh instance of Raspberry Pi, consider running 'sudo apt-get update && sudo apt-get upgrade' followed by a reboot before running the installation script." 10 60
     #&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
@@ -31,13 +31,21 @@ function main() {
     OINKCODE=$(whiptail --inputbox "Enter your Oinkcode for Snort. If you don't have Snort account, please register at https://www.snort.org/users/sign_in in order to get newest Snort ules:" 8 78 --title "Snort Oinkcode" 3>&1 1>&2 2>&3)
     SSH_CLIENT_IP=$(echo $SSH_CLIENT | awk '{ print $1}')
     SSH_CUSTOM_PORT_NUMBER=$(whiptail --inputbox "Enter your custom SSH port number between 1024 and 65536 :" 8 78 --title "SSH Port" 3>&1 1>&2 2>&3)
-    if [[ $SSH_CUSTOM_PORT_NUMBER -eq 22 || $SSH_CUSTOM_PORT_NUMBER -eq 80 || $SSH_CUSTOM_PORT_NUMBER -eq 443 || $SSH_CUSTOM_PORT_NUMBER -eq 8080 ]]
+    if [ $result = 0 ]; then
+        echo "Custom SSH port number: $SSH_CUSTOM_PORT_NUMBER"
+    else
+        SSH_CUSTOM_PORT_NUMBER=2341
+    fi
+    
+    if [[ $SSH_CUSTOM_PORT_NUMBER -lt 1024 || $SSH_CUSTOM_PORT_NUMBER -eq 22 || $SSH_CUSTOM_PORT_NUMBER -eq 80 || $SSH_CUSTOM_PORT_NUMBER -eq 443 || $SSH_CUSTOM_PORT_NUMBER -eq 8080 || $SSH_CUSTOM_PORT_NUMBER -gt 65536 ]]
     then
         echo "Invalid port number. I've chosen port 2341 for You"
-        $SSH_CUSTOM_PORT_NUMBER=2341
+        SSH_CUSTOM_PORT_NUMBER=2341
+        
     else
         echo "Custom SSH port number: $SSH_CUSTOM_PORT_NUMBER"
     fi
+    
     sudo sed -i 's/#Port 22/Port '$SSH_CUSTOM_PORT_NUMBER'/' /etc/ssh/sshd_config
     sudo systemctl reload ssh
     #&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
@@ -80,6 +88,13 @@ function main() {
     reboot_function
 }
 
+function enable_colors(){
+    sudo sed -i 's/#force_color_prompt=yes/force_color_prompt=yes/' ~/.bashrc
+    sudo echo "export LS_COLORS='rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=30;41:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.Z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.jpg=01;35:*.jpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;
+" >> ~/.bashrc
+    sudo source ~/.bashrc
+}
+
 function Update() {
     echo "Updating the system 🖥️"
     sudo apt update && sudo apt upgrade -y #/dev/null 2>&1
@@ -104,11 +119,11 @@ function Welcome() {
 }
 
 function check_device_info() {
+    echo "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
     echo "Checking device info 🔍"
+    echo "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
     sudo apt-get install neofetch -y #> /dev/null 2>&1
-    
     check_device_info_counter=0
-    
     # Check the amount of RAM
     ram=$(free -h | awk '/Mem:/ {print $2}' | grep -Eo '[0-9].[0-9]')
     if [ $ram -lt 3.7 ]; then
@@ -147,9 +162,9 @@ function check_device_info() {
 }
 
 function snort() {
-    echo "${PINK}Installing snort${PINK}🐖"
+    echo "$PINK Installing snort$PINK🐖"
     sudo apt-get update && sudo apt-get upgrade -y
-    sudo apt-get install snort -y &
+    sudo apt-get install snort -y
     sudo systemctl enable snort
     sudo chmod 766 /etc/snort/rules/local.rules
     sudo sed -i 's/ipvar HOME_NET any/ipvar HOME_NET '$HOST_IP_ADDRESS'/' /etc/snort/snort.conf
@@ -162,15 +177,26 @@ function snort() {
 
 function docker_installer() {
     echo "${BLUE}Installing docker${BLUE}🐋"
+    sudo apt-get remove docker docker-engine docker.io containerd runc -y
+    sudo apt-get update
+    sudo apt-get install ca-certificates curl gnupg lsb-release -y
+    sudo mkdir -p /etc/apt/keyrings
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+    $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+    sudo apt-get update
+    sudo apt-get install docker-ce docker-ce-cli containerd.io docker-compose-plugin -y
+    sudo systemctl enable docker
+    sudo chmod 666 /var/run/docker.sock
+}
+
     sudo apt-get -y install ca-certificates curl gnupg lsb-release
     sudo mkdir -p /etc/apt/keyrings
     sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
     echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
     sudo apt-get update
     sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
-    sudo systemctl enable docker
-    sudo chmod 666 /var/run/docker.sock
-}
+    
 
 function nextcloud_installer() {
     echo "${CYAN}Installing Nextcloud${CYAN}☁️"
@@ -395,7 +421,7 @@ function AuditD_installer() {
     sudo aureport --summary > AuditD_Report.txt
     enscript AuditD_Report.txt --output=- | ps2pdf - > AuditD_Report.pdf
     mpack -s "AuditD Report summary" -a AuditD_Report.pdf $EMAIL
-    rm AuditD_Report.txt AuditD_Report.pdf
+    rm AuditD_Report.txt #AuditD_Report.pdf
 }
 
 function Rkhunter_installer() {
@@ -405,17 +431,13 @@ function Rkhunter_installer() {
     sudo cat /var/log/rkhunter.log > rkhunter_report.txt
     enscript rkhunter_report.txt --output=- | ps2pdf - > rkhunter_report.pdf
     mpack -s "Rkhuner log report" -a rkhunter_report.pdf $EMAIL
-    rm rkhunter_report.txt rkhunter_report.pdf
+    rm rkhunter_report.txt #rkhunter_report.pdf
 }
 
 function Honeypot_installer() {
     echo "${YELLOW}Setting up Honeypot${YELLOW}🐝"
-    git clone https://github.com/adambaczkowski/RaspberryPi-Honeypot
-    cd RaspberryPi-Honeypot
-    sudo chmod +x install.sh
-    sudo ./install.sh
+    
 }
-
 
 function Lynis_installer() {
     echo "${GREEN}Installing Lynis - System security audit${GREEN}🎯"
@@ -424,7 +446,7 @@ function Lynis_installer() {
     sudo cat /var/log/lynis.log > lynis_log.txt
     enscript lynis_log.txt --output=- | ps2pdf - > lynis_log.pdf
     mpack -s "Lynis system audit" -a lynis_log.pdf $EMAIL
-    rm lynis_log.txt lynis_log.pdf
+    rm lynis_log.txt #lynis_log.pdf
 }
 
 function Docker_Bench_Installer() {
@@ -435,7 +457,7 @@ function Docker_Bench_Installer() {
     cd
     enscript docker_audit.txt --output=- | ps2pdf - > docker_audit.pdf
     mpack -s "Docker security audit" -a docker_audit.pdf $EMAIL
-    rm docker_audit.txt docker_audit.pdf
+    rm docker_audit.txt #docker_audit.pdf
 }
 
 function OS_Hardening() {
@@ -507,41 +529,41 @@ function Kernel_Hardening() {
     sudo sysctl fs.protected_regular=2
     
     # Turn off unnecesary kernel modules
-    sudo echo 'dccp /bin/false' >> /etc/modprobe.d/blacklist.conf
-    sudo echo 'sctp /bin/false' >> /etc/modprobe.d/blacklist.conf
-    sudo echo 'rds /bin/false' >> /etc/modprobe.d/blacklist.conf
-    sudo echo 'tipc /bin/false' >> /etc/modprobe.d/blacklist.conf
-    sudo echo 'n-hdlc /bin/false' >> /etc/modprobe.d/blacklist.conf
-    sudo echo 'ax25 /bin/false' >> /etc/modprobe.d/blacklist.conf
-    sudo echo 'netrom /bin/false' >> /etc/modprobe.d/blacklist.conf
-    sudo echo 'x25 /bin/false' >> /etc/modprobe.d/blacklist.conf
-    sudo echo 'rose /bin/false' >> /etc/modprobe.d/blacklist.conf
-    sudo echo 'decnet /bin/false' >> /etc/modprobe.d/blacklist.conf
-    sudo echo 'econet /bin/false' >> /etc/modprobe.d/blacklist.conf
-    sudo echo 'af_802154 /bin/false' >> /etc/modprobe.d/blacklist.conf
-    sudo echo 'ipx /bin/false' >> /etc/modprobe.d/blacklist.conf
-    sudo echo 'appletalk /bin/false' >> /etc/modprobe.d/blacklist.conf
-    sudo echo 'psnap /bin/false' >> /etc/modprobe.d/blacklist.conf
-    sudo echo 'p8023 /bin/false' >> /etc/modprobe.d/blacklist.conf
-    sudo echo 'p8022 /bin/false' >> /etc/modprobe.d/blacklist.conf
-    sudo echo 'can /bin/false' >> /etc/modprobe.d/blacklist.conf
-    sudo echo 'atm /bin/false' >> /etc/modprobe.d/blacklist.conf
-    sudo echo 'cramfs /bin/false' >> /etc/modprobe.d/blacklist.conf
-    sudo echo 'freevxfs /bin/false' >> /etc/modprobe.d/blacklist.conf
-    sudo echo 'jffs2 /bin/false' >> /etc/modprobe.d/blacklist.conf
-    sudo echo 'hfs /bin/false' >> /etc/modprobe.d/blacklist.conf
-    sudo echo 'hfsplus /bin/false' >> /etc/modprobe.d/blacklist.conf
-    sudo echo 'squashfs /bin/false' >> /etc/modprobe.d/blacklist.conf
-    sudo echo 'udf /bin/false' >> /etc/modprobe.d/blacklist.conf
-    sudo echo 'cifs /bin/true' >> /etc/modprobe.d/blacklist.conf
-    sudo echo 'nfs /bin/true' >> /etc/modprobe.d/blacklist.conf
-    sudo echo 'nfsv3 /bin/true' >> /etc/modprobe.d/blacklist.conf
-    sudo echo 'nfsv4 /bin/true' >> /etc/modprobe.d/blacklist.conf
-    sudo echo 'ksmbd /bin/true' >> /etc/modprobe.d/blacklist.conf
-    sudo echo 'gfs2 /bin/true' >> /etc/modprobe.d/blacklist.conf
-    sudo echo 'bluetooth /bin/false' >> /etc/modprobe.d/blacklist.conf
-    sudo echo 'btusb /bin/false' >> /etc/modprobe.d/blacklist.conf
-    sudo echo 'uvcvideo /bin/false' >> /etc/modprobe.d/blacklist.conf
+    sudo echo 'dccp /bin/false' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'sctp /bin/false' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'rds /bin/false' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'tipc /bin/false' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'n-hdlc /bin/false' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'ax25 /bin/false' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'netrom /bin/false' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'x25 /bin/false' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'rose /bin/false' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'decnet /bin/false' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'econet /bin/false' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'af_802154 /bin/false' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'ipx /bin/false' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'appletalk /bin/false' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'psnap /bin/false' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'p8023 /bin/false' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'p8022 /bin/false' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'can /bin/false' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'atm /bin/false' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'cramfs /bin/false' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'freevxfs /bin/false' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'jffs2 /bin/false' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'hfs /bin/false' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'hfsplus /bin/false' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'squashfs /bin/false' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'udf /bin/false' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'cifs /bin/true' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'nfs /bin/true' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'nfsv3 /bin/true' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'nfsv4 /bin/true' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'ksmbd /bin/true' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'gfs2 /bin/true' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'bluetooth /bin/false' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'btusb /bin/false' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'uvcvideo /bin/false' | sudo tee -a /etc/modprobe.d/blacklist.conf
     rfkill block all
 }
 
