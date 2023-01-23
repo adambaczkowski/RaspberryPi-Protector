@@ -20,8 +20,8 @@ function main() {
     #VARIABLES
     HOST_IP_ADDRESS=$(hostname -I | awk '{print $1}')
     HOST_MASK_ADDRESS=$(ip addr show | grep -oP '^[0-9]+: \K(e[^:]*)')
-    E_MAIL=$(whiptail --inputbox "Enter your email address:" 8 78 --title "Email" 3>&1 1>&2 2>&3)
-    E_MAIL_PASSWORD=$(whiptail --passwordbox "Enter your email password:" 8 78 --title "Password" 3>&1 1>&2 2>&3)
+    EMAIL=$(whiptail --inputbox "Enter your email address:" 8 78 --title "Email" 3>&1 1>&2 2>&3)
+    EMAIL_PASSWORD=$(whiptail --passwordbox "Enter your email password:" 8 78 --title "Password" 3>&1 1>&2 2>&3)
     GRAFANA_LOGIN=$(whiptail --inputbox "Enter your Grafana login:" 8 78 --title "Grafana Login" 3>&1 1>&2 2>&3)
     GRAFANA_PASSWORD=$(whiptail --passwordbox "Enter your Grafana password:" 8 78 --title "Grafana Password" 3>&1 1>&2 2>&3)
     NEXTCLOUD_LOGIN=$(whiptail --inputbox "Enter your Nextcloud login:" 8 78 --title "Nextcloud Login" 3>&1 1>&2 2>&3)
@@ -346,8 +346,8 @@ function fail2ban_installer() {
     sudo cp /etc/fail2ban/jail.conf /etc/fail2ban/jail.local
     
     sudo sed -i 's/#ignoreip = 127.0.0.1\/8 ::1/ignoreip = 127.0.0.1\/8 ::1 '$SSH_CLIENT_IP'/' /etc/fail2ban/jail.local
-    sudo sed -i 's/destemail = root@localhost/destemail = '$E_MAIL'/' /etc/fail2ban/jail.local
-    sudo sed -i 's/sender = root@<fq-hostname>/sender = '$E_MAIL'/' /etc/fail2ban/jail.local
+    sudo sed -i 's/destemail = root@localhost/destemail = '$EMAIL'/' /etc/fail2ban/jail.local
+    sudo sed -i 's/sender = root@<fq-hostname>/sender = '$EMAIL'/' /etc/fail2ban/jail.local
     sudo sed -i 's/port = 0:65535/port = 0:'$SSH_CUSTOM_PORT_NUMBER'/' /etc/fail2ban/jail.local
     sudo systemctl enable fail2ban
     sudo systemctl start sendmail
@@ -373,11 +373,11 @@ function mail_setup() {
     sudo chown root:mail /etc/ssmtp/ssmtp.conf
     
     echo -n "
-root="$E_MAIL"
+root="$EMAIL"
 mailhub=smtp.gmail.com:465
 rewriteDomain=gmail.com
-AuthUser="$E_MAIL"
-AuthPass="$E_MAIL_PASSWORD"
+AuthUser="$EMAIL"
+AuthPass="$EMAIL_PASSWORD"
 FromLineOverride=YES
 UseTLS=YES
     " | sudo tee /etc/ssmtp/ssmtp.conf /dev/null 2>&1
@@ -394,7 +394,7 @@ function AuditD_installer() {
     sudo systemctl enable auditd.service
     sudo aureport --summary > AuditD_Report.txt
     enscript AuditD_Report.txt --output=- | ps2pdf - > AuditD_Report.pdf
-    mpack -s "AuditD Report summary" -a AuditD_Report.pdf $E_MAIL
+    mpack -s "AuditD Report summary" -a AuditD_Report.pdf $EMAIL
     rm AuditD_Report.txt AuditD_Report.pdf
 }
 
@@ -404,7 +404,7 @@ function Rkhunter_installer() {
     sudo rkhunter --check --skip-keypress
     sudo cat /var/log/rkhunter.log > rkhunter_report.txt
     enscript rkhunter_report.txt --output=- | ps2pdf - > rkhunter_report.pdf
-    mpack -s "Rkhuner log report" -a rkhunter_report.pdf $E_MAIL
+    mpack -s "Rkhuner log report" -a rkhunter_report.pdf $EMAIL
     rm rkhunter_report.txt rkhunter_report.pdf
 }
 
@@ -424,7 +424,7 @@ function Lynis_installer() {
     sudo lynis audit system
     sudo cat /var/log/lynis.log > lynis_log.txt
     enscript lynis_log.txt --output=- | ps2pdf - > lynis_log.pdf
-    mpack -s "Lynis system audit" -a lynis_log.pdf $E_MAIL
+    mpack -s "Lynis system audit" -a lynis_log.pdf $EMAIL
     rm lynis_log.txt lynis_log.pdf
 }
 
@@ -435,7 +435,7 @@ function Docker_Bench_Installer() {
     sudo ./docker-bench-security.sh > ~/docker_audit.txt
     cd
     enscript docker_audit.txt --output=- | ps2pdf - > docker_audit.pdf
-    mpack -s "Docker security audit" -a docker_audit.pdf $E_MAIL
+    mpack -s "Docker security audit" -a docker_audit.pdf $EMAIL
     rm docker_audit.txt docker_audit.pdf
 }
 
@@ -582,7 +582,7 @@ CONNS_PER_SEC=$(sudo iptables -vnL | awk '{print $2}' | tail -n1)
 if [ $CONNS_PER_SEC -gt $THRESHOLD ]; then
     echo "DDoS attack detected! Number of connections per second: $CONNS_PER_SEC"
     echo q | htop | aha --black --line-fix > htop.html
-    mpack -s "DDoS Alert" -a htop.html $E_MAIL
+    mpack -s "DDoS Alert" -a htop.html $EMAIL
     fi" | sudo tee ddos_cron.sh
     sudo chmod 766 /etc/crontab
     sudo mv ddos_cron.sh /usr/local/bin > /dev/null 2>&1
@@ -603,7 +603,7 @@ RAM_USAGE=$(free -m | awk '/^Mem:/{print $3/$2 * 100.0}')
 if [ $(echo "$RAM_USAGE > $THRESHOLD" | bc) -eq 1 ]; then
     echo "RAM usage is above 85%! Current usage: $RAM_USAGE%"
     echo q | htop | aha --black --line-fix > htop.html
-    mpack -s "RAM Alert" -a htop.html $E_MAIL
+    mpack -s "RAM Alert" -a htop.html $EMAIL
     fi" | sudo tee high_ram_cron.sh
     sudo chmod 766 /etc/crontab
     sudo mv high_ram_cron.sh /usr/local/bin > /dev/null 2>&1
