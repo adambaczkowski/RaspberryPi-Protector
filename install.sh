@@ -30,7 +30,7 @@ function main() {
     #NEXTCLOUD_LOGIN=$(whiptail --inputbox "Enter your Nextcloud login:" 8 78 --title "Nextcloud Login" 3>&1 1>&2 2>&3)
     #NEXTCLOUD_PASSWORD=$(whiptail --passwordbox "Enter your Nextcloud password:" 8 78 --title "Nextcloud Password" 3>&1 1>&2 2>&3)
     NEXTCLOUD_DB_PASSWORD=$(whiptail --passwordbox "Enter your Nextcloud Database password:" 8 78 --title "Nextcloud Database Password" 3>&1 1>&2 2>&3)
-    OINKCODE=$(whiptail --inputbox "Enter your Oinkcode for Snort. If you don't have Snort account, please register at https://www.snort.org/users/sign_in in order to get newest Snort ules:" 8 78 --title "Snort Oinkcode" 3>&1 1>&2 2>&3)
+    #OINKCODE=$(whiptail --inputbox "Enter your Oinkcode for Snort. If you don't have Snort account, please register at https://www.snort.org/users/sign_in in order to get newest Snort ules:" 8 78 --title "Snort Oinkcode" 3>&1 1>&2 2>&3)
     SSH_CLIENT_IP=$(echo -ne $SSH_CLIENT | awk '{ print $1}')
     
     SSH_CUSTOM_PORT_NUMBER=$(whiptail --inputbox "Enter your custom SSH port number between 1024 and 65536 :" 8 78 --title "SSH Port" 3>&1 1>&2 2>&3)
@@ -58,6 +58,8 @@ function main() {
     rsyslog_installer
     sleep 2
     snort #|| echo -ne "${RED}Snort installation has failed ❌${NO_COLOR}"
+    sleep 2
+    pulledpork_installation
     sleep 2
     docker_installer #|| echo -ne "${RED}Dokcer installation has failed ❌${NO_COLOR}"
     sleep 2
@@ -196,10 +198,9 @@ function rsyslog_installer() {
     sudo sed -i 's/#module(load="imtcp")/module(load="imtcp")/' /etc/rsyslog.conf
     sudo sed -i 's/#input(type="imtcp" port="514")/input(type="imtcp" port="514")/' /etc/rsyslog.conf
     
-    echo -n "
-$template LokiFormat,"<%pri%>%protocol-version% %timestamp:::date-rfc3339% %HOSTNAME% %app-name% %procid% %msgid% [snort_event_id=%msg%][snort_sid=%msg:::json%][snort_gid=%msg:::json%]"
-
-    if $programname == 'snort' then @@127.0.0.1:3100;LokiFormat" | sudo tee /etc/rsyslog.d/snort_logs.conf
+    echo '$template LokiFormat,"<%pri%>%protocol-version% %timestamp:::date-rfc3339% %HOSTNAME% %app-name% %procid% %msgid% [snort_event_id=%msg%][snort_sid=%msg:::json%][snort_gid=%msg:::json%]"' | sudo tee -a /etc/rsyslog.d/snort_logs.conf
+    echo 'if $programname == 'snort' then @@127.0.0.1:3100;LokiFormat;' | sudo tee -a /etc/rsyslog.d/snort_logs.conf
+    
     sudo systemctl daemon-reload
     sudo systemctl enable rsyslog
     sudo systemctl restart rsyslog
@@ -208,15 +209,45 @@ $template LokiFormat,"<%pri%>%protocol-version% %timestamp:::date-rfc3339% %HOST
 function snort() {
     echo -ne "\n${PINK} Installing snort${NO_COLOR}🐖\n"
     sudo apt-get update && sudo apt-get upgrade -y
-    sudo apt-get install snort -y
+    sudo DEBIAN_FRONTEND=noninteractive apt-get install snort -y
     sudo systemctl enable snort
     sudo chmod 766 /etc/snort/rules/local.rules
     sudo sed -i 's/ipvar HOME_NET any/ipvar HOME_NET '$HOST_IP_ADDRESS'/' /etc/snort/snort.conf
+    sudo sed -i 's/# output alert_syslog: LOG_AUTH LOG_ALERT/output alert_syslog: host='$HOST_IP_ADDRESS':514, LOG_AUTH LOG_ALERT /' /etc/snort/snort.conf
+    sudo sed -i 's/# output log_tcpdump: tcpdump.log/output log_tcpdump: tcpdump.log/' /etc/snort/snort.conf
     wget https://raw.githubusercontent.com/adambaczkowski/snort-local-rules/main/snort_rules.txt
     sudo cat snort_rules.txt >> /etc/snort/rules/local.rules
     sudo snort -T -c /etc/snort/snort.conf
     sudo systemctl daemon-reload
     sudo systemctl restart snort.service
+}
+
+function pulledpork_installation() {
+    echo -ne "\n${PURPLE} Installing Pulledpork - snort rules importer${NO_COLOR}🥩\n"
+    sudo apt-get install libcrypt-ssleay-perl liblwp-protocol-https-perl -y
+    git clone https://github.com/shirkdog/pulledpork.git
+    cd pulledpork
+    sudo cp pulledpork.pl /usr/local/bin
+    sudo chmod +x /usr/local/bin/pulledpork.pl
+    sudo mkdir /etc/pulledpork
+    sudo cp etc/*.conf /etc/pulledpork/
+    
+    sudo sed -i "s/<oinkcode>/$OINKCODE/g" /etc/pulledpork/pulledpork.conf
+    sudo sed -i "s/#rule_url=https:\/\/rules.emergingthreats.net\//https://www.snort.org/rules/snortrules-snapshot-29151.tar.gz?oinkcode='$OINKCODE'\//g" /etc/pulledpork/pulledpork.conf
+    sudo sed -i "s/\/usr\/local\/etc\/snort\//\/etc\/snort\//g" /etc/pulledpork/pulledpork.conf
+    sudo sed -i "s/# enablesid=/enablesid=/g" /etc/pulledpork/pulledpork.conf
+    sudo sed -i "s/# dropsid=/enablesid=/g" /etc/pulledpork/pulledpork.conf
+    sudo sed -i "s/# disablesid=/enablesid=/g" /etc/pulledpork/pulledpork.conf
+    sudo sed -i "s/# modifysid=/enablesid=/g" /etc/pulledpork/pulledpork.conf
+    sudo sed -i "s/distro=FreeBSD-12/distro=Ubuntu-18-4/g" /etc/pulledpork/pulledpork.conf
+    sudo sed -i "s/# out_path=/out_path=/g" /etc/pulledpork/pulledpork.conf
+    
+    
+    sudo chmod 766 /etc/crontab
+    sudo echo "0 */12 * * * root /usr/local/bin/pulledpork.pl -c /etc/pulledpork/pulledpork.conf -i disablesid.conf -T -H" >> /etc/crontab
+    sudo echo "0 */12 * * * root /usr/local/bin/ruleitor" >> /etc/crontab
+    
+    sudo pulledpork.pl -V
 }
 
 function docker_installer() {
