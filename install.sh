@@ -500,27 +500,7 @@ maxretry = 3
     " | sudo tee -a /etc/fail2ban/jail.local
     
     echo -n "
-# Honeypot jail for deferring bruteforce and portscan attacks
-# For this jail to function first move your ssh port from 22 to some other high number port.
-####
-# add logging rules to iptables
-## in the input chain:
-# iptables -A INPUT -p tcp -m tcp --dport 22 --tcp-flags FIN,SYN,RST,ACK SYN -j HONEYPOT
-## create a honepot chain
-# iptables -N HONEYPOT
-# iptables -A HONEYPOT -j LOG --log-prefix "honeypot: " --log-level 6
-# iptables -A HONEYPOT -j DROP
-## update your jail.local with the following:
-# [honeypot]
-# enabled  = true
-# filter   = honeypot
-# logpath  = /var/log/messages
-# action = %(action_)s
-# bantime  = 604800
-# maxretry = 1
-
 [INCLUDES]
-
 # Read common prefixes. If any customizations available -- read them from
 # common.local
 before = common.conf
@@ -679,8 +659,8 @@ function Firewall() {
     sudo sed -i 's/#   Port 22/    Port '$SSH_CUSTOM_PORT_NUMBER'/' /etc/ssh/ssh_config
     sudo sed -i 's/#Port 22/Port '$SSH_CUSTOM_PORT_NUMBER'/' /etc/ssh/sshd_config
     sudo systemctl daemon-reload
-    sudo systemctl enable sshd.service
-    sudo systemctl reload sshd.service
+    sudo systemctl enable ssh
+    sudo systemctl reload ssh
     sudo fail2ban-client set sshd unbanip $SSH_CLIENT_IP
 }
 
