@@ -246,7 +246,7 @@ function pulledpork_installation() {
     sudo chmod 766 /etc/crontab
     sudo echo "0 */12 * * * root /usr/local/bin/pulledpork.pl -c /etc/pulledpork/pulledpork.conf -i disablesid.conf -T -H" >> /etc/crontab
     sudo echo "0 */12 * * * root /usr/local/bin/ruleitor" >> /etc/crontab
-    
+    cd
     sudo pulledpork.pl -V
 }
 
@@ -541,7 +541,7 @@ before = common.conf
 _daemon = fail2ban\.actions
 _jailname = honeypot
 failregex = honeypot: .*? SRC=<HOST>
-    " | sudo tee -a /etc/fail2ban/filter.d/honeypot.conf
+    " | sudo tee -a /etc/fail2ban/filter.d/honeypot.conf > /dev/null 2>&1
     sudo fail2ban-client reload honeypot
     
 }
@@ -716,7 +716,7 @@ if [ $CONNS_PER_SEC -gt $THRESHOLD ]; then
     sudo chmod 766 /etc/crontab
     sudo mv ddos_cron.sh /usr/local/bin > /dev/null 2>&1
     sudo chmod +x /usr/local/bin/ddos_cron.sh > /dev/null 2>&1
-    sudo echo "1 * * * * root /usr/local/bin/ddos_cron.sh" | sudo tee -a /etc/crontab
+    sudo echo "1 * * * * root /usr/local/bin/ddos_cron.sh" | sudo tee -a /etc/crontab > /dev/null 2>&1
 }
 
 function High_RAM_Mail_Setup() {
@@ -737,7 +737,7 @@ if [ $(echo "$RAM_USAGE > $THRESHOLD" | bc) -eq 1 ]; then
     sudo chmod 766 /etc/crontab
     sudo mv high_ram_cron.sh /usr/local/bin > /dev/null 2>&1
     sudo chmod +x /usr/local/bin/high_ram_cron.sh > /dev/null 2>&1
-    sudo echo "1 * * * * root /usr/local/bin/high_ram_cron.sh" | sudo tee -a /etc/crontab
+    sudo echo "1 * * * * root /usr/local/bin/high_ram_cron.sh" | sudo tee -a /etc/crontab > /dev/null 2>&1
 }
 
 function Cleanup() {
@@ -797,3 +797,4 @@ function progress_bar() {
     echo ""
 }
 main
+#EOF
