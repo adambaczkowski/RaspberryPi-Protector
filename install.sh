@@ -183,7 +183,6 @@ function check_device_info() {
     else
         exit 1
     fi
-fi
 
 echo -ne "\nThis device meets the requirements for installation ✅\n"
 neofetch
