@@ -28,31 +28,31 @@ function main() {
     #GRAFANA_PASSWORD=$(whiptail --passwordbox "Enter your Grafana password:" 8 78 --title "Grafana Password" 3>&1 1>&2 2>&3)
     #NEXTCLOUD_LOGIN=$(whiptail --inputbox "Enter your Nextcloud login:" 8 78 --title "Nextcloud Login" 3>&1 1>&2 2>&3)
     #NEXTCLOUD_PASSWORD=$(whiptail --passwordbox "Enter your Nextcloud password:" 8 78 --title "Nextcloud Password" 3>&1 1>&2 2>&3)
+    NEXTCLOUD_DB_PASSWORD=$(whiptail --passwordbox "Enter your Nextcloud Database password:" 8 78 --title "Nextcloud Database Password" 3>&1 1>&2 2>&3)
     OINKCODE=$(whiptail --inputbox "Enter your Oinkcode for Snort. If you don't have Snort account, please register at https://www.snort.org/users/sign_in in order to get newest Snort ules:" 8 78 --title "Snort Oinkcode" 3>&1 1>&2 2>&3)
     SSH_CLIENT_IP=$(echo -ne $SSH_CLIENT | awk '{ print $1}')
     SSH_CUSTOM_PORT_NUMBER=$(whiptail --inputbox "Enter your custom SSH port number between 1024 and 65536 :" 8 78 --title "SSH Port" 3>&1 1>&2 2>&3)
     if [ $result = 0 ]; then
         echo "Custom SSH port number: $SSH_CUSTOM_PORT_NUMBER"
     else
-        SSH_CUSTOM_PORT_NUMBER=2341
+        SSH_CUSTOM_PORT_NUMBER=60001
     fi
     
     if [[ $SSH_CUSTOM_PORT_NUMBER -lt 1024 || $SSH_CUSTOM_PORT_NUMBER -eq 22 || $SSH_CUSTOM_PORT_NUMBER -eq 80 || $SSH_CUSTOM_PORT_NUMBER -eq 443 || $SSH_CUSTOM_PORT_NUMBER -eq 8080 || $SSH_CUSTOM_PORT_NUMBER -gt 65536 ]];then
-        echo "Invalid port number. I've chosen port 2341 for You"
-        SSH_CUSTOM_PORT_NUMBER=2341
+        echo "Invalid port number. I've chosen port 60001 for You"
+        SSH_CUSTOM_PORT_NUMBER=60001
     else
         echo "Custom SSH port number: $SSH_CUSTOM_PORT_NUMBER"
     fi
     
-    sudo sed -i 's/#Port 22/Port '$SSH_CUSTOM_PORT_NUMBER'/' /etc/ssh/sshd_config
-    sudo systemctl reload ssh
-    sudo systemctl restart ssh
     #&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
     sleep 5
     check_device_info
     sleep 2
     start_time=$(date +%s)
     Update #|| echo -ne "${RED}Update has failed ❌${NO_COLOR}"
+    sleep 2
+    rsyslog_installer
     sleep 2
     snort #|| echo -ne "${RED}Snort installation has failed ❌${NO_COLOR}"
     sleep 2
@@ -185,6 +185,19 @@ function check_device_info() {
 }
 function rsyslog_installer() {
     sudo apt-get install -y rsyslog
+    sudo sed -i 's/#module(load="imudp")/module(load="imudp")/' /etc/rsyslog.conf
+    sudo sed -i 's/#input(type="imudp" port="514")/input(type="imudp" port="514")/' /etc/rsyslog.conf
+    sudo sed -i 's/#module(load="imtcp")/module(load="imtcp")/' /etc/rsyslog.conf
+    sudo sed -i 's/#input(type="imtcp" port="514")/input(type="imtcp" port="514")/' /etc/rsyslog.conf
+    
+    echo -n "
+$template LokiFormat,"<%pri%>%protocol-version% %timestamp:::date-rfc3339% %HOSTNAME% %app-name% %procid% %msgid% [snort_event_id=%msg%][snort_sid=%msg:::json%][snort_gid=%msg:::json%]"
+
+if $programname == 'snort' then @@127.0.0.1:3100;LokiFormat
+    " | sudo tee /etc/rsyslog.d/snort_logs.conf
+    sudo systemctl daemon-reload
+    sudo systemctl enable rsyslog
+    sudo systemctl restart rsyslog
 }
 
 function snort() {
@@ -221,7 +234,9 @@ function docker_installer() {
 function nextcloud_installer() {
     echo -ne "\n${CYAN}Installing Nextcloud${NO_COLOR}☁️\n"
     docker pull nextcloud
+    docker pull postgres
     sudo docker network create --driver bridge nextcloud-net
+    sudo docker run --name postgres -v /home/pi/nextcloud-db:/var/lib/postgresql/data -e POSTGRES_PASSWORD=$NEXTCLOUD_DB_PASSWORD --network nextcloud-net -d postgres
     sudo docker run --name nextcloud -d -p 8080:80 -v /home/pi/nextcloud:/var/www/html --network nextcloud-net nextcloud
     sudo systemctl daemon-reload
 }
@@ -288,7 +303,7 @@ ExecStart=/usr/local/bin/prometheus \
     --web.console.libraries=/etc/prometheus/console_libraries
 [Install]
 WantedBy=multi-user.target
-    " | sudo tee /etc/systemd/system/prometheus.service
+    " | sudo tee /etc/systemd/system/prometheus.service > /dev/null 2>&1
     
     sudo systemctl daemon-reload
     sudo systemctl start prometheus.service
@@ -317,7 +332,7 @@ ExecStart=/usr/local/bin/node_exporter
 
 [Install]
 WantedBy=multi-user.target
-    " | sudo tee /etc/systemd/system/node_exporter.service
+    " | sudo tee /etc/systemd/system/node_exporter.service > /dev/null 2>&1
     
     sudo systemctl daemon-reload
     sudo systemctl enable node_exporter
@@ -348,8 +363,8 @@ ExecStart=/opt/loki/loki-linux-arm64 -config.file=/opt/loki/loki-local-config.ya
 Restart=on-failure
 
 [Install]
-WantedBy=multi-user.target
-    " | sudo tee /etc/systemd/system/loki.service
+WantedBy=multi-user.target 
+    " | sudo tee /etc/systemd/system/loki.service > /dev/null 2>&1
     
     sudo systemctl daemon-reload
     sudo service loki start
@@ -382,7 +397,7 @@ RestartSec=10
 
 [Install]
 WantedBy=multi-user.target
-    " | sudo tee /etc/systemd/system/promtail.service
+    " | sudo tee /etc/systemd/system/promtail.service > /dev/null 2>&1
     
     sudo systemctl daemon-reload
     sudo service promtail start
@@ -398,9 +413,13 @@ function fail2ban_installer() {
     sudo sed -i 's/#ignoreip = 127.0.0.1\/8 ::1/ignoreip = 127.0.0.1\/8 ::1 '$SSH_CLIENT_IP'/' /etc/fail2ban/jail.local
     sudo sed -i 's/destemail = root@localhost/destemail = '$EMAIL'/' /etc/fail2ban/jail.local
     sudo sed -i 's/sender = root@<fq-hostname>/sender = '$EMAIL'/' /etc/fail2ban/jail.local
-    sudo sed -i 's/port = 0:65535/port = 0:'$SSH_CUSTOM_PORT_NUMBER'/' /etc/fail2ban/jail.local
+    sudo sed -i '285s/port = ssh/port = '$SSH_CUSTOM_PORT_NUMBER'/' /etc/fail2ban/jail.local
+    
+    #echo -n "maxretry = 3" | sudo tee -a /etc/fail2ban/jail.d/defaults-debian.conf
+    
     sudo systemctl daemon-reload
     sudo systemctl enable fail2ban
+    sudo systemctl start fail2ban
 }
 
 function ClamAV_installer() {
@@ -429,7 +448,7 @@ AuthUser="$EMAIL"
 AuthPass="$EMAIL_PASSWORD"
 FromLineOverride=YES
 UseTLS=YES
-    " | sudo tee -a /etc/ssmtp/ssmtp.conf /dev/null 2>&1
+    " | sudo tee -a /etc/ssmtp/ssmtp.conf > /dev/null 2>&1
 }
 
 function AuditD_installer() {
@@ -457,25 +476,58 @@ function Rkhunter_installer() {
 }
 
 function Honeypot_installer() {
-    echo -ne "\n${YELLOW}Installing Honeypot - rootkit check engine{$NO_COLOR}🐝\n"
-    sudo apt-get install git python3-virtualenv libssl-dev libffi-dev build-essential libpython3-dev python3-minimal authbind python3-venv -y
-    git clone https://github.com/adambaczkowski/cowrie
-    cd cowrie
-    python3 -m venv cowrie-env
-    source cowrie-env/bin/activate
-    python3 -m pip install --upgrade pip
-    python3 -m pip install --upgrade -r requirements.txt
-    bin/cowrie start
-    sudo iptables -t nat -A PREROUTING -p tcp --dport 22 -j REDIRECT --to-port 2222
-    sudo iptables -t nat -A PREROUTING -p tcp --dport 22 -j REDIRECT --to-port 2222
-    setcap cap_net_bind_service=+ep /usr/bin/python3
-    etc/cowrie.cfg
-    cd
-    sudo cp ~/cowrie/docs/systemd/etc/systemd/system/cowrie.socket /etc/systemd/system
-    sudo cp ~/cowrie/docs/systemd/etc/systemd/system/cowrie.service /etc/systemd/system
-    sudo systemctl daemon-reload
-    sudo systemctl enable cowrie.service
-    sudo systemctl start cowrie.service
+    echo -ne "\n${YELLOW}Creating Honeypot{$NO_COLOR}🐝\n"
+    sudo iptables -N HONEYPOT
+    sudo iptables -A HONEYPOT -j LOG --log-prefix "honeypot: " --log-level 6
+    sudo iptables -A HONEYPOT -j DROP
+    sudo iptables -A INPUT -p tcp -m tcp --dport 22 --tcp-flags FIN,SYN,RST,ACK SYN -j HONEYPOT
+    sudo iptables-save > ~/iptables.save
+    
+    
+    echo -n "
+[honeypot]
+enabled  = true
+filter   = honeypot
+logpath  = /var/log/messages
+banaction = iptables-allports
+bantime  = 604800
+maxretry = 3
+    " | sudo -tee /etc/fail2ban/jail.local
+    
+    echo -n "
+# Honeypot jail for deferring bruteforce and portscan attacks
+# For this jail to function first move your ssh port from 22 to some other high number port.
+####
+# add logging rules to iptables
+## in the input chain:
+# iptables -A INPUT -p tcp -m tcp --dport 22 --tcp-flags FIN,SYN,RST,ACK SYN -j HONEYPOT
+## create a honepot chain
+# iptables -N HONEYPOT
+# iptables -A HONEYPOT -j LOG --log-prefix "honeypot: " --log-level 6
+# iptables -A HONEYPOT -j DROP
+## update your jail.local with the following:
+# [honeypot]
+# enabled  = true
+# filter   = honeypot
+# logpath  = /var/log/messages
+# action = %(action_)s
+# bantime  = 604800
+# maxretry = 1
+
+[INCLUDES]
+
+# Read common prefixes. If any customizations available -- read them from
+# common.local
+before = common.conf
+
+[Definition]
+
+_daemon = fail2ban\.actions
+_jailname = honeypot
+failregex = honeypot: .*? SRC=<HOST>
+    " | sudo tee -a /etc/fail2ban/filter.d/honeypot.conf
+    sudo fail2ban-client reload honeypot
+    
 }
 
 function Lynis_installer() {
@@ -500,7 +552,7 @@ function Docker_Bench_Installer() {
 }
 
 function OS_Hardening() {
-    echo "\nPerforming OS hardening 🔒\n"
+    echo -ne "\nPerforming OS hardening 🔒\n"
     echo "Disabling Wi-Fi"
     sudo apt install rfkill -y
     sudo rfkill block 1
@@ -568,41 +620,40 @@ function Kernel_Hardening() {
     sudo sysctl fs.protected_regular=2
     
     # Turn off unnecesary kernel modules
-    sudo echo 'blacklist dccp' | sudo tee -a /etc/modprobe.d/.conf
-    sudo echo 'blacklist sctp ' | sudo tee -a /etc/modprobe.d/.conf
-    sudo echo 'blacklist rds ' | sudo tee -a /etc/modprobe.d/.conf
-    sudo echo 'blacklist tipc ' | sudo tee -a /etc/modprobe.d/.conf
-    sudo echo 'blacklist n-hdlc ' | sudo tee -a /etc/modprobe.d/.conf
-    sudo echo 'blacklist ax25 ' | sudo tee -a /etc/modprobe.d/.conf
-    sudo echo 'blacklist netrom ' | sudo tee -a /etc/modprobe.d/.conf
-    sudo echo 'blacklist x25 ' | sudo tee -a /etc/modprobe.d/.conf
-    sudo echo 'blacklist rose ' | sudo tee -a /etc/modprobe.d/.conf
-    sudo echo 'blacklist decnet ' | sudo tee -a /etc/modprobe.d/.conf
-    sudo echo 'blacklist econet ' | sudo tee -a /etc/modprobe.d/.conf
-    sudo echo 'blacklist af_802154 ' | sudo tee -a /etc/modprobe.d/.conf
-    sudo echo 'blacklist ipx ' | sudo tee -a /etc/modprobe.d/.conf
-    sudo echo 'blacklist appletalk ' | sudo tee -a /etc/modprobe.d/.conf
-    sudo echo 'blacklist psnap ' | sudo tee -a /etc/modprobe.d/.conf
-    sudo echo 'blacklist p8023 ' | sudo tee -a /etc/modprobe.d/.conf
-    sudo echo 'blacklist p8022 ' | sudo tee -a /etc/modprobe.d/.conf
-    sudo echo 'blacklist can ' | sudo tee -a /etc/modprobe.d/.conf
-    sudo echo 'blacklist atm ' | sudo tee -a /etc/modprobe.d/.conf
-    sudo echo 'blacklist cramfs ' | sudo tee -a /etc/modprobe.d/.conf
-    sudo echo 'blacklist freevxfs ' | sudo tee -a /etc/modprobe.d/.conf
-    sudo echo 'blacklist jffs2 ' | sudo tee -a /etc/modprobe.d/.conf
-    sudo echo 'blacklist hfs ' | sudo tee -a /etc/modprobe.d/.conf
-    sudo echo 'blacklist hfsplus ' | sudo tee -a /etc/modprobe.d/.conf
-    sudo echo 'blacklist squashfs ' | sudo tee -a /etc/modprobe.d/.conf
-    sudo echo 'blacklist udf ' | sudo tee -a /etc/modprobe.d/.conf
-    sudo echo 'blacklist bluetooth ' | sudo tee -a /etc/modprobe.d/.conf
-    sudo echo 'blacklist btusb ' | sudo tee -a /etc/modprobe.d/.conf
-    sudo echo 'blacklist uvcvideo ' | sudo tee -a /etc/modprobe.d/.conf
-    sudo rfkill block all
-}
+    sudo echo 'blacklist dccp' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'blacklist sctp ' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'blacklist rds ' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'blacklist tipc ' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'blacklist n-hdlc ' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'blacklist ax25 ' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'blacklist netrom ' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'blacklist x25 ' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'blacklist rose ' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'blacklist decnet ' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'blacklist econet ' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'blacklist af_802154 ' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'blacklist ipx ' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'blacklist appletalk ' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'blacklist psnap ' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'blacklist p8023 ' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'blacklist p8022 ' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'blacklist can ' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'blacklist atm ' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'blacklist cramfs ' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'blacklist freevxfs ' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'blacklist jffs2 ' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'blacklist hfs ' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'blacklist hfsplus ' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'blacklist squashfs ' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'blacklist udf ' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'blacklist bluetooth ' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'blacklist btusb ' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'blacklist uvcvideo ' | sudo tee -a /etc/modprobe.d/blacklist.conf
 
 function Firewall() {
     echo -ne "\n${ORANGE}Setting up Firewall 🔥${NO_COLOR}\n"
     sudo echo -ne "y" | sudo ufw enable
+    sudo ufw allow ssh
     sudo ufw allow 80
     sudo ufw allow 443
     sudo ufw allow 8080
@@ -617,7 +668,14 @@ function Firewall() {
     sudo ufw allow 3100
     sudo ufw allow 9096
     sudo ufw allow 2222
+    sudo ufw allow 514
     sudo ufw allow $SSH_CUSTOM_PORT_NUMBER
+    sudo sed -i 's/#   Port 22/    Port '$SSH_CUSTOM_PORT_NUMBER'/' /etc/ssh/ssh_config
+    sudo sed -i 's/#Port 22/Port '$SSH_CUSTOM_PORT_NUMBER'/' /etc/ssh/sshd_config
+    sudo systemctl daemon-reload
+    sudo systemctl enable sshd.service
+    sudo systemctl reload sshd.service
+    sudo fail2ban-client set sshd unbanip $SSH_CLIENT_IP
 }
 
 function DDOS_Mail_Setup() {
