@@ -41,7 +41,7 @@ function main() {
         SSH_CUSTOM_PORT_NUMBER=60001
     fi
     
-    if [[ $SSH_CUSTOM_PORT_NUMBER -lt 1024 || $SSH_CUSTOM_PORT_NUMBER -eq 22 || $SSH_CUSTOM_PORT_NUMBER -eq 80 || $SSH_CUSTOM_PORT_NUMBER -eq 443 || $SSH_CUSTOM_PORT_NUMBER -eq 8080 || $SSH_CUSTOM_PORT_NUMBER -gt 65536 ]];then
+    if [[ $SSH_CUSTOM_PORT_NUMBER -lt 1024 || $SSH_CUSTOM_PORT_NUMBER -eq 22 || $SSH_CUSTOM_PORT_NUMBER -eq 80 || $SSH_CUSTOM_PORT_NUMBER -eq 443 || $SSH_CUSTOM_PORT_NUMBER -eq 8080 || $SSH_CUSTOM_PORT_NUMBER -gt 65536 ]]; then
         echo "Invalid port number. I've chosen port 60001 for You"
         SSH_CUSTOM_PORT_NUMBER=60001
     else
@@ -174,126 +174,125 @@ function check_device_info() {
     fi
     
     if [ "$check_device_info_counter" -gt 0 ]; then
-    result=$(whiptail --title "This device doesn't meet requirements." --yesno " Are you sure you want proceed with installation?" 8 78 3>&1 1>&2 2>&3)
-    if [ $result = 0 ]; then
-        echo -ne "\nThis device doesn't meet the requirements for installation❌\n"
-        echo -ne "\nRunning installer, might break the system😟\n"
-        break
-    else
-        exit 1
+        result=$(whiptail --title "This device doesn't meet requirements." --yesno " Are you sure you want proceed with installation?" 8 78 3>&1 1>&2 2>&3)
+        if [ $result = 0 ]; then
+            echo -ne "\nThis device doesn't meet the requirements for installation❌\n"
+            echo -ne "\nRunning installer, might break the system😟\n"
+            break
+        else
+            exit 1
+        fi
     fi
-fi
-
-echo -ne "\nThis device meets the requirements for installation ✅\n"
-neofetch
-sleep 5
-clear
+    
+    echo -ne "\nThis device meets the requirements for installation ✅\n"
+    neofetch
+    sleep 5
+    clear
 }
 function rsyslog_installer() {
-sudo apt-get install -y rsyslog
-sudo sed -i 's/#module(load="imudp")/module(load="imudp")/' /etc/rsyslog.conf
-sudo sed -i 's/#input(type="imudp" port="514")/input(type="imudp" port="514")/' /etc/rsyslog.conf
-sudo sed -i 's/#module(load="imtcp")/module(load="imtcp")/' /etc/rsyslog.conf
-sudo sed -i 's/#input(type="imtcp" port="514")/input(type="imtcp" port="514")/' /etc/rsyslog.conf
-
-echo -n "
+    sudo apt-get install -y rsyslog
+    sudo sed -i 's/#module(load="imudp")/module(load="imudp")/' /etc/rsyslog.conf
+    sudo sed -i 's/#input(type="imudp" port="514")/input(type="imudp" port="514")/' /etc/rsyslog.conf
+    sudo sed -i 's/#module(load="imtcp")/module(load="imtcp")/' /etc/rsyslog.conf
+    sudo sed -i 's/#input(type="imtcp" port="514")/input(type="imtcp" port="514")/' /etc/rsyslog.conf
+    
+    echo -n "
 $template LokiFormat,"<%pri%>%protocol-version% %timestamp:::date-rfc3339% %HOSTNAME% %app-name% %procid% %msgid% [snort_event_id=%msg%][snort_sid=%msg:::json%][snort_gid=%msg:::json%]"
 
-if $programname == 'snort' then @@127.0.0.1:3100;LokiFormat
-" | sudo tee /etc/rsyslog.d/snort_logs.conf
-sudo systemctl daemon-reload
-sudo systemctl enable rsyslog
-sudo systemctl restart rsyslog
+    if $programname == 'snort' then @@127.0.0.1:3100;LokiFormat" | sudo tee /etc/rsyslog.d/snort_logs.conf
+    sudo systemctl daemon-reload
+    sudo systemctl enable rsyslog
+    sudo systemctl restart rsyslog
 }
 
 function snort() {
-echo -ne "\n${PINK} Installing snort${NO_COLOR}🐖\n"
-sudo apt-get update && sudo apt-get upgrade -y
-sudo apt-get install snort -y
-sudo systemctl enable snort
-sudo chmod 766 /etc/snort/rules/local.rules
-sudo sed -i 's/ipvar HOME_NET any/ipvar HOME_NET '$HOST_IP_ADDRESS'/' /etc/snort/snort.conf
-wget https://raw.githubusercontent.com/adambaczkowski/snort-local-rules/main/snort_rules.txt
-sudo cat snort_rules.txt >> /etc/snort/rules/local.rules
-sudo snort -T -c /etc/snort/snort.conf
-sudo systemctl daemon-reload
-sudo systemctl restart snort.service
+    echo -ne "\n${PINK} Installing snort${NO_COLOR}🐖\n"
+    sudo apt-get update && sudo apt-get upgrade -y
+    sudo apt-get install snort -y
+    sudo systemctl enable snort
+    sudo chmod 766 /etc/snort/rules/local.rules
+    sudo sed -i 's/ipvar HOME_NET any/ipvar HOME_NET '$HOST_IP_ADDRESS'/' /etc/snort/snort.conf
+    wget https://raw.githubusercontent.com/adambaczkowski/snort-local-rules/main/snort_rules.txt
+    sudo cat snort_rules.txt >> /etc/snort/rules/local.rules
+    sudo snort -T -c /etc/snort/snort.conf
+    sudo systemctl daemon-reload
+    sudo systemctl restart snort.service
 }
 
 function docker_installer() {
-echo -ne "\n${BLUE}Installing docker${NO_COLOR}🐋\n"
-sudo apt-get remove docker docker-engine docker.io containerd runc -y
-sudo apt-get update
-sudo apt-get install ca-certificates curl gnupg lsb-release lsb-core -y
-sudo mkdir -p /etc/apt/keyrings
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-echo \
-"deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
-$(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-sudo apt-get update
-sudo apt-get install docker-ce docker-ce-cli containerd.io docker-compose-plugin -y
-sudo systemctl daemon-reload
-sudo systemctl enable docker
-sudo chmod 666 /var/run/docker.sock
+    echo -ne "\n${BLUE}Installing docker${NO_COLOR}🐋\n"
+    sudo apt-get remove docker docker-engine docker.io containerd runc -y
+    sudo apt-get update
+    sudo apt-get install ca-certificates curl gnupg lsb-release lsb-core -y
+    sudo mkdir -p /etc/apt/keyrings
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+    echo \
+    "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+    $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+    sudo apt-get update
+    sudo apt-get install docker-ce docker-ce-cli containerd.io docker-compose-plugin -y
+    sudo systemctl daemon-reload
+    sudo systemctl enable docker
+    sudo chmod 666 /var/run/docker.sock
 }
 
 function nextcloud_installer() {
-echo -ne "\n${CYAN}Installing Nextcloud${NO_COLOR}☁️\n"
-docker pull nextcloud
-docker pull postgres
-sudo docker network create --driver bridge nextcloud-net
-sudo docker run --name postgres -v /home/pi/nextcloud-db:/var/lib/postgresql/data -e POSTGRES_PASSWORD=$NEXTCLOUD_DB_PASSWORD --network nextcloud-net -d postgres
-sudo docker run --name nextcloud -d -p 8080:80 -v /home/pi/nextcloud:/var/www/html --network nextcloud-net nextcloud
-sudo systemctl daemon-reload
+    echo -ne "\n${CYAN}Installing Nextcloud${NO_COLOR}☁️\n"
+    docker pull nextcloud
+    docker pull postgres
+    sudo docker network create --driver bridge nextcloud-net
+    sudo docker run --name postgres -v /home/pi/nextcloud-db:/var/lib/postgresql/data -e POSTGRES_PASSWORD=$NEXTCLOUD_DB_PASSWORD --network nextcloud-net -d postgres
+    sudo docker run --name nextcloud -d -p 8080:80 -v /home/pi/nextcloud:/var/www/html --network nextcloud-net nextcloud
+    sudo systemctl daemon-reload
 }
 
 function yacht_installer() {
-echo -ne "\nInstalling Yacht ⛵\n"
-sudo docker volume create yacht
-docker pull selfhostedpro/yacht
-sudo docker run -d -p 8000:8000 -v /var/run/docker.sock:/var/run/docker.sock -v yacht:/config --name yacht selfhostedpro/yacht
-sudo systemctl daemon-reload
+    echo -ne "\nInstalling Yacht ⛵\n"
+    sudo docker volume create yacht
+    docker pull selfhostedpro/yacht
+    sudo docker run -d -p 8000:8000 -v /var/run/docker.sock:/var/run/docker.sock -v yacht:/config --name yacht selfhostedpro/yacht
+    sudo systemctl daemon-reload
 }
 
 function grafana_installer() {
-echo -ne "\n${YELLOW}Installing Grafana${NO_COLOR}🌞\n"
-sudo wget -qO /etc/apt/trusted.gpg.d/grafana.asc https://packages.grafana.com/gpg.key
-echo -ne "deb https://packages.grafana.com/oss/deb stable main" | sudo tee /etc/apt/sources.list.d/grafana.list
-sudo apt update
-sudo apt install -y grafana
-sudo systemctl daemon-reload
-sudo service grafana-server start
-sudo systemctl enable grafana-server
-sudo usermod -a -G adm grafana
-
+    echo -ne "\n${YELLOW}Installing Grafana${NO_COLOR}🌞\n"
+    sudo wget -qO /etc/apt/trusted.gpg.d/grafana.asc https://packages.grafana.com/gpg.key
+    echo -ne "deb https://packages.grafana.com/oss/deb stable main" | sudo tee /etc/apt/sources.list.d/grafana.list
+    sudo apt update
+    sudo apt install -y grafana
+    sudo systemctl daemon-reload
+    sudo service grafana-server start
+    sudo systemctl enable grafana-server
+    sudo usermod -a -G adm grafana
+    
 }
 
 function prometheus_installer() {
-echo -ne "\n${ORANGE}Installing Prometheus${NO_COLOR}🔥\n"
-sudo mkdir /etc/prometheus
-sudo useradd --no-create-home --shell  prometheus
-sudo mkdir /var/lib/prometheus
-sudo groupadd prometheus
-sudo usermod -a -G prometheus prometheus
-sudo chown prometheus:prometheus /etc/prometheus
-sudo chown prometheus:prometheus /var/lib/prometheus
-sudo wget https://github.com/prometheus/prometheus/releases/download/v2.41.0/prometheus-2.41.0.linux-arm64.tar.gz
-sudo tar xvfz prometheus-*.tar.gz
-sudo cp prometheus-2.41.0.linux-arm64/prometheus /usr/local/bin/
-sudo cp prometheus-2.41.0.linux-arm64/promtool /usr/local/bin/
-sudo chown prometheus:prometheus /usr/local/bin/prometheus
-sudo chown prometheus:prometheus /usr/local/bin/promtool
-sudo cp -r prometheus-2.41.0.linux-arm64/consoles /etc/prometheus
-sudo cp -r prometheus-2.41.0.linux-arm64/console_libraries /etc/prometheus
-sudo cp -r prometheus-2.41.0.linux-arm64/prometheus.yml /etc/prometheus
-sudo chown -R prometheus:prometheus /etc/prometheus/consoles
-sudo chown -R prometheus:prometheus /etc/prometheus/console_libraries
-sudo chown -R prometheus:prometheus /etc/prometheus/prometheus.yml
-wget https://raw.githubusercontent.com/adambaczkowski/prometheus-ossec-config/main/prometheus.yml
-sudo cat prometheus.yml | sudo tee /etc/prometheus/prometheus.yml
-sudo mv prometheus-2.41.0.linux-arm64 /etc/prometheus
-sudo chown prometheus:prometheus -R /etc/prometheus
-sudo echo -n "
+    echo -ne "\n${ORANGE}Installing Prometheus${NO_COLOR}🔥\n"
+    sudo mkdir /etc/prometheus
+    sudo useradd --no-create-home --shell  prometheus
+    sudo mkdir /var/lib/prometheus
+    sudo groupadd prometheus
+    sudo usermod -a -G prometheus prometheus
+    sudo chown prometheus:prometheus /etc/prometheus
+    sudo chown prometheus:prometheus /var/lib/prometheus
+    sudo wget https://github.com/prometheus/prometheus/releases/download/v2.41.0/prometheus-2.41.0.linux-arm64.tar.gz
+    sudo tar xvfz prometheus-*.tar.gz
+    sudo cp prometheus-2.41.0.linux-arm64/prometheus /usr/local/bin/
+    sudo cp prometheus-2.41.0.linux-arm64/promtool /usr/local/bin/
+    sudo chown prometheus:prometheus /usr/local/bin/prometheus
+    sudo chown prometheus:prometheus /usr/local/bin/promtool
+    sudo cp -r prometheus-2.41.0.linux-arm64/consoles /etc/prometheus
+    sudo cp -r prometheus-2.41.0.linux-arm64/console_libraries /etc/prometheus
+    sudo cp -r prometheus-2.41.0.linux-arm64/prometheus.yml /etc/prometheus
+    sudo chown -R prometheus:prometheus /etc/prometheus/consoles
+    sudo chown -R prometheus:prometheus /etc/prometheus/console_libraries
+    sudo chown -R prometheus:prometheus /etc/prometheus/prometheus.yml
+    wget https://raw.githubusercontent.com/adambaczkowski/prometheus-ossec-config/main/prometheus.yml
+    sudo cat prometheus.yml | sudo tee /etc/prometheus/prometheus.yml
+    sudo mv prometheus-2.41.0.linux-arm64 /etc/prometheus
+    sudo chown prometheus:prometheus -R /etc/prometheus
+    sudo echo -n "
 [Unit]
 Description=Prometheus
 Wants=network-online.target
@@ -309,23 +308,23 @@ ExecStart=/usr/local/bin/prometheus \
     --web.console.libraries=/etc/prometheus/console_libraries
 [Install]
 WantedBy=multi-user.target
-" | sudo tee /etc/systemd/system/prometheus.service > /dev/null 2>&1
-
-sudo systemctl daemon-reload
-sudo systemctl start prometheus.service
-sudo systemctl enable prometheus.service
+    " | sudo tee /etc/systemd/system/prometheus.service > /dev/null 2>&1
+    
+    sudo systemctl daemon-reload
+    sudo systemctl start prometheus.service
+    sudo systemctl enable prometheus.service
 }
 
 function node_exporter_installer() {
-echo -ne "\nInstalling node exporter ⚙️\n"
-wget https://github.com/prometheus/node_exporter/releases/download/v1.5.0/node_exporter-1.5.0.linux-arm64.tar.gz
-tar vxfz node_exporter-1.5.0.linux-arm64.tar.gz
-sudo useradd -m node_exporter
-sudo groupadd node_exporter
-sudo usermod -a -G node_exporter node_exporter
-sudo mv node_exporter-1.5.0.linux-arm64/node_exporter /usr/local/bin/
-sudo chown node_exporter:node_exporter /usr/local/bin/node_exporter
-sudo echo -n "
+    echo -ne "\nInstalling node exporter ⚙️\n"
+    wget https://github.com/prometheus/node_exporter/releases/download/v1.5.0/node_exporter-1.5.0.linux-arm64.tar.gz
+    tar vxfz node_exporter-1.5.0.linux-arm64.tar.gz
+    sudo useradd -m node_exporter
+    sudo groupadd node_exporter
+    sudo usermod -a -G node_exporter node_exporter
+    sudo mv node_exporter-1.5.0.linux-arm64/node_exporter /usr/local/bin/
+    sudo chown node_exporter:node_exporter /usr/local/bin/node_exporter
+    sudo echo -n "
 [Unit]
 Description=Node Exporter
 After=network.target
@@ -338,27 +337,27 @@ ExecStart=/usr/local/bin/node_exporter
 
 [Install]
 WantedBy=multi-user.target
-" | sudo tee /etc/systemd/system/node_exporter.service > /dev/null 2>&1
-
-sudo systemctl daemon-reload
-sudo systemctl enable node_exporter
-sudo systemctl start node_exporter
-sudo rm -rf node_exporter-1.5.0.linux-arm64/
+    " | sudo tee /etc/systemd/system/node_exporter.service > /dev/null 2>&1
+    
+    sudo systemctl daemon-reload
+    sudo systemctl enable node_exporter
+    sudo systemctl start node_exporter
+    sudo rm -rf node_exporter-1.5.0.linux-arm64/
 }
 
 function loki_installer() {
-echo -ne "\nInstalling Loki 🧭\n"
-sudo apt install unzip -y
-wget https://github.com/grafana/loki/releases/download/v2.7.1/loki-linux-arm64.zip
-unzip loki-linux-arm64.zip
-sudo mkdir /opt/loki
-sudo mv loki-linux-arm64 /opt/loki/
-sudo chmod a+x /opt/loki/loki-linux-arm64
-sudo ln -s /opt/loki/loki-linux-arm64 /usr/local/bin/loki
-wget https://raw.githubusercontent.com/grafana/loki/main/cmd/loki/loki-local-config.yaml
-sudo mv loki-local-config.yaml /opt/loki
-
-sudo echo -n "
+    echo -ne "\nInstalling Loki 🧭\n"
+    sudo apt install unzip -y
+    wget https://github.com/grafana/loki/releases/download/v2.7.1/loki-linux-arm64.zip
+    unzip loki-linux-arm64.zip
+    sudo mkdir /opt/loki
+    sudo mv loki-linux-arm64 /opt/loki/
+    sudo chmod a+x /opt/loki/loki-linux-arm64
+    sudo ln -s /opt/loki/loki-linux-arm64 /usr/local/bin/loki
+    wget https://raw.githubusercontent.com/grafana/loki/main/cmd/loki/loki-local-config.yaml
+    sudo mv loki-local-config.yaml /opt/loki
+    
+    sudo echo -n "
 [Unit]
 Description=Loki - log aggregation system
 After=network.target
@@ -370,25 +369,25 @@ Restart=on-failure
 
 [Install]
 WantedBy=multi-user.target
-" | sudo tee /etc/systemd/system/loki.service > /dev/null 2>&1
-
-sudo systemctl daemon-reload
-sudo service loki start
-sudo systemctl enable loki.service
+    " | sudo tee /etc/systemd/system/loki.service > /dev/null 2>&1
+    
+    sudo systemctl daemon-reload
+    sudo service loki start
+    sudo systemctl enable loki.service
 }
 
 function promtail_installer() {
-echo -ne "\nInstalling Promtail 🪁\n"
-wget https://github.com/grafana/loki/releases/download/v2.7.1/promtail-linux-arm64.zip
-unzip promtail-linux-arm64.zip
-sudo mkdir /opt/promtail
-sudo mv promtail-linux-arm64 /opt/promtail/
-sudo chmod a+x /opt/promtail/promtail-linux-arm64
-sudo ln -s /opt/promtail/promtail-linux-arm64 /usr/local/bin/promtail
-wget https://raw.githubusercontent.com/grafana/loki/v2.7.1/clients/cmd/promtail/promtail-local-config.yaml
-sudo mv promtail-local-config.yaml /opt/promtail/
-
-sudo echo -n "
+    echo -ne "\nInstalling Promtail 🪁\n"
+    wget https://github.com/grafana/loki/releases/download/v2.7.1/promtail-linux-arm64.zip
+    unzip promtail-linux-arm64.zip
+    sudo mkdir /opt/promtail
+    sudo mv promtail-linux-arm64 /opt/promtail/
+    sudo chmod a+x /opt/promtail/promtail-linux-arm64
+    sudo ln -s /opt/promtail/promtail-linux-arm64 /usr/local/bin/promtail
+    wget https://raw.githubusercontent.com/grafana/loki/v2.7.1/clients/cmd/promtail/promtail-local-config.yaml
+    sudo mv promtail-local-config.yaml /opt/promtail/
+    
+    sudo echo -n "
 [Unit]
 Description=Promtail client for sending logs to Loki
 After=loki.service
@@ -403,50 +402,50 @@ RestartSec=10
 
 [Install]
 WantedBy=multi-user.target
-" | sudo tee /etc/systemd/system/promtail.service > /dev/null 2>&1
-
-sudo systemctl daemon-reload
-sudo service promtail start
-sudo systemctl enable promtail
+    " | sudo tee /etc/systemd/system/promtail.service > /dev/null 2>&1
+    
+    sudo systemctl daemon-reload
+    sudo service promtail start
+    sudo systemctl enable promtail
 }
 
 function fail2ban_installer() {
-echo -ne "\n${GREEN}Installing Fail2Ban${NO_COLOR} 🚫\n"
-sudo apt-get -y install fail2ban
-sudo cp /etc/fail2ban/fail2ban.conf /etc/fail2ban/fail2ban.local
-sudo cp /etc/fail2ban/jail.conf /etc/fail2ban/jail.local
-
-sudo sed -i 's/#ignoreip = 127.0.0.1\/8 ::1/ignoreip = 127.0.0.1\/8 ::1 '$SSH_CLIENT_IP'/' /etc/fail2ban/jail.local
-sudo sed -i 's/destemail = root@localhost/destemail = '$EMAIL'/' /etc/fail2ban/jail.local
-sudo sed -i 's/sender = root@<fq-hostname>/sender = '$EMAIL'/' /etc/fail2ban/jail.local
-sudo sed -i '285s/port = ssh/port = '$SSH_CUSTOM_PORT_NUMBER'/' /etc/fail2ban/jail.local
-
-echo -n "maxretry = 3" | sudo tee -a /etc/fail2ban/jail.d/defaults-debian.conf
-
-sudo systemctl daemon-reload
-sudo systemctl enable fail2ban
-sudo systemctl start fail2ban
+    echo -ne "\n${GREEN}Installing Fail2Ban${NO_COLOR} 🚫\n"
+    sudo apt-get -y install fail2ban
+    sudo cp /etc/fail2ban/fail2ban.conf /etc/fail2ban/fail2ban.local
+    sudo cp /etc/fail2ban/jail.conf /etc/fail2ban/jail.local
+    
+    sudo sed -i 's/#ignoreip = 127.0.0.1\/8 ::1/ignoreip = 127.0.0.1\/8 ::1 '$SSH_CLIENT_IP'/' /etc/fail2ban/jail.local
+    sudo sed -i 's/destemail = root@localhost/destemail = '$EMAIL'/' /etc/fail2ban/jail.local
+    sudo sed -i 's/sender = root@<fq-hostname>/sender = '$EMAIL'/' /etc/fail2ban/jail.local
+    sudo sed -i '285s/port = ssh/port = '$SSH_CUSTOM_PORT_NUMBER'/' /etc/fail2ban/jail.local
+    
+    echo -n "maxretry = 3" | sudo tee -a /etc/fail2ban/jail.d/defaults-debian.conf
+    
+    sudo systemctl daemon-reload
+    sudo systemctl enable fail2ban
+    sudo systemctl start fail2ban
 }
 
 function ClamAV_installer() {
-echo -ne "\n${RED}Installing ClamAV - Antivirus${NO_COLOR}👾\n"
-sudo apt-get -y install clamav clamav-daemon
-sudo systemctl stop clamav-freshclam
-sudo freshclam || wget https://database.clamav.net/daily.cvd
-sudo mkdir /var/lib/clamav
-sudo cp daily.cvd /var/lib/clamav/daily.cvd
-sudo systemctl daemon-reload
-sudo systemctl start clamav-freshclam
-sudo systemctl enable clamav-freshclam
-#sudo clamscan --infected --recursive --remove /
+    echo -ne "\n${RED}Installing ClamAV - Antivirus${NO_COLOR}👾\n"
+    sudo apt-get -y install clamav clamav-daemon
+    sudo systemctl stop clamav-freshclam
+    sudo freshclam || wget https://database.clamav.net/daily.cvd
+    sudo mkdir /var/lib/clamav
+    sudo cp daily.cvd /var/lib/clamav/daily.cvd
+    sudo systemctl daemon-reload
+    sudo systemctl start clamav-freshclam
+    sudo systemctl enable clamav-freshclam
+    #sudo clamscan --infected --recursive --remove /
 }
 
 function mail_setup() {
-echo -ne "\nInsatlling and setting up mail 📧\n"
-sudo apt-get install libio-socket-ssl-perl libnet-ssleay-perl -y
-sudo apt install ssmtp enscript ghostscript mailutils mpack -y
-sudo chown root:mail /etc/ssmtp/ssmtp.conf
-echo -n "
+    echo -ne "\nInsatlling and setting up mail 📧\n"
+    sudo apt-get install libio-socket-ssl-perl libnet-ssleay-perl -y
+    sudo apt install ssmtp enscript ghostscript mailutils mpack -y
+    sudo chown root:mail /etc/ssmtp/ssmtp.conf
+    echo -n "
 root="$EMAIL"
 mailhub=smtp.gmail.com:465
 rewriteDomain=gmail.com
@@ -454,43 +453,43 @@ AuthUser="$EMAIL"
 AuthPass="$EMAIL_PASSWORD"
 FromLineOverride=YES
 UseTLS=YES
-" | sudo tee -a /etc/ssmtp/ssmtp.conf > /dev/null 2>&1
+    " | sudo tee -a /etc/ssmtp/ssmtp.conf > /dev/null 2>&1
 }
 
 function AuditD_installer() {
-echo -ne "\n${PURPLE}Installing AuditD${NO_COLOR}👓\n"
-sudo apt install auditd expect -y
-sudo rm /etc/audit/rules.d/audit.rules
-sudo wget https://raw.githubusercontent.com/Neo23x0/auditd/master/audit.rules -P /etc/audit/rules.d/
-sudo systemctl daemon-reload
-sudo service auditd start
-sudo systemctl enable auditd.service
-sudo aureport --summary > AuditD_Report.txt
-enscript AuditD_Report.txt --output=- | ps2pdf - > AuditD_Report.pdf
-mpack -s "AuditD Report summary" -a AuditD_Report.pdf $EMAIL
-rm AuditD_Report.txt #AuditD_Report.pdf
+    echo -ne "\n${PURPLE}Installing AuditD${NO_COLOR}👓\n"
+    sudo apt install auditd expect -y
+    sudo rm /etc/audit/rules.d/audit.rules
+    sudo wget https://raw.githubusercontent.com/Neo23x0/auditd/master/audit.rules -P /etc/audit/rules.d/
+    sudo systemctl daemon-reload
+    sudo service auditd start
+    sudo systemctl enable auditd.service
+    sudo aureport --summary > AuditD_Report.txt
+    enscript AuditD_Report.txt --output=- | ps2pdf - > AuditD_Report.pdf
+    mpack -s "AuditD Report summary" -a AuditD_Report.pdf $EMAIL
+    rm AuditD_Report.txt #AuditD_Report.pdf
 }
 
 function Rkhunter_installer() {
-echo -ne "\n${PINK}Installing Rkhunter - rootkit check engine{$NO_COLOR}🕵️‍♂️\n"
-sudo apt install rkhunter -y
-sudo rkhunter --check --skip-keypress
-sudo cat /var/log/rkhunter.log > rkhunter_report.txt
-enscript rkhunter_report.txt --output=- | ps2pdf - > rkhunter_report.pdf
-mpack -s "Rkhuner log report" -a rkhunter_report.pdf $EMAIL
-rm rkhunter_report.txt #rkhunter_report.pdf
+    echo -ne "\n${PINK}Installing Rkhunter - rootkit check engine{$NO_COLOR}🕵️‍♂️\n"
+    sudo apt install rkhunter -y
+    sudo rkhunter --check --skip-keypress
+    sudo cat /var/log/rkhunter.log > rkhunter_report.txt
+    enscript rkhunter_report.txt --output=- | ps2pdf - > rkhunter_report.pdf
+    mpack -s "Rkhuner log report" -a rkhunter_report.pdf $EMAIL
+    rm rkhunter_report.txt #rkhunter_report.pdf
 }
 
 function Honeypot_installer() {
-echo -ne "\n${YELLOW}Creating Honeypot{$NO_COLOR}🐝\n"
-sudo iptables -N HONEYPOT
-sudo iptables -A HONEYPOT -j LOG --log-prefix "honeypot: " --log-level 6
-sudo iptables -A HONEYPOT -j DROP
-sudo iptables -A INPUT -p tcp -m tcp --dport 22 --tcp-flags FIN,SYN,RST,ACK SYN -j HONEYPOT
-sudo iptables-save > ~/iptables.save
-
-
-echo -n "
+    echo -ne "\n${YELLOW}Creating Honeypot{$NO_COLOR}🐝\n"
+    sudo iptables -N HONEYPOT
+    sudo iptables -A HONEYPOT -j LOG --log-prefix "honeypot: " --log-level 6
+    sudo iptables -A HONEYPOT -j DROP
+    sudo iptables -A INPUT -p tcp -m tcp --dport 22 --tcp-flags FIN,SYN,RST,ACK SYN -j HONEYPOT
+    sudo iptables-save > ~/iptables.save
+    
+    
+    echo -n "
 [honeypot]
 enabled  = true
 filter   = honeypot
@@ -498,9 +497,9 @@ logpath  = /var/log/messages
 banaction = iptables-allports
 bantime  = 604800
 maxretry = 3
-" | sudo -tee /etc/fail2ban/jail.local
-
-echo -n "
+    " | sudo tee -a /etc/fail2ban/jail.local
+    
+    echo -n "
 # Honeypot jail for deferring bruteforce and portscan attacks
 # For this jail to function first move your ssh port from 22 to some other high number port.
 ####
@@ -531,130 +530,131 @@ before = common.conf
 _daemon = fail2ban\.actions
 _jailname = honeypot
 failregex = honeypot: .*? SRC=<HOST>
-" | sudo tee -a /etc/fail2ban/filter.d/honeypot.conf
-sudo fail2ban-client reload honeypot
-
+    " | sudo tee -a /etc/fail2ban/filter.d/honeypot.conf
+    sudo fail2ban-client reload honeypot
+    
 }
 
 function Lynis_installer() {
-echo -ne "\n${GREEN}Installing Lynis - System security audit${NO_COLOR}🎯\n"
-sudo apt install lynis mpack -y
-sudo lynis audit system
-sudo cat /var/log/lynis.log > lynis_log.txt
-enscript lynis_log.txt --output=- | ps2pdf - > lynis_log.pdf
-mpack -s "Lynis system audit" -a lynis_log.pdf $EMAIL
-rm lynis_log.txt #lynis_log.pdf
+    echo -ne "\n${GREEN}Installing Lynis - System security audit${NO_COLOR}🎯\n"
+    sudo apt install lynis mpack -y
+    sudo lynis audit system
+    sudo cat /var/log/lynis.log > lynis_log.txt
+    enscript lynis_log.txt --output=- | ps2pdf - > lynis_log.pdf
+    mpack -s "Lynis system audit" -a lynis_log.pdf $EMAIL
+    rm lynis_log.txt #lynis_log.pdf
 }
 
 function Docker_Bench_Installer() {
-echo -ne "\n${BLUE}Installing DockerBench - Docker containers security audit${NO_COLOR}📦\n"
-git clone https://github.com/docker/docker-bench-security.git
-cd docker-bench-security
-sudo ./docker-bench-security.sh > ~/docker_audit.txt
-cd
-enscript docker_audit.txt --output=- | ps2pdf - > docker_audit.pdf
-mpack -s "Docker security audit" -a docker_audit.pdf $EMAIL
-rm docker_audit.txt #docker_audit.pdf
+    echo -ne "\n${BLUE}Installing DockerBench - Docker containers security audit${NO_COLOR}📦\n"
+    git clone https://github.com/docker/docker-bench-security.git
+    cd docker-bench-security
+    sudo ./docker-bench-security.sh > ~/docker_audit.txt
+    cd
+    enscript docker_audit.txt --output=- | ps2pdf - > docker_audit.pdf
+    mpack -s "Docker security audit" -a docker_audit.pdf $EMAIL
+    rm docker_audit.txt #docker_audit.pdf
 }
 
 function OS_Hardening() {
-echo -ne "\nPerforming OS hardening 🔒\n"
-echo "Disabling Wi-Fi"
-sudo apt install rfkill -y
-sudo rfkill block 1
-echo "Disabling Bluetooth"
-sudo systemctl disable hciuart.service
-echo "Empty password check"
-sudo awk -F: '($2 == "") {print}' /etc/shadow
-echo "Disabling Telnet"
-sudo apt-get remove telnetd -y /dev/null 2>&1
+    echo -ne "\nPerforming OS hardening 🔒\n"
+    echo "Disabling Wi-Fi"
+    sudo apt install rfkill -y
+    sudo rfkill block 1
+    echo "Disabling Bluetooth"
+    sudo systemctl disable hciuart.service
+    echo "Empty password check"
+    sudo awk -F: '($2 == "") {print}' /etc/shadow
+    echo "Disabling Telnet"
+    sudo apt-get remove telnetd -y /dev/null 2>&1
 }
 
 function Kernel_Hardening() {
-echo -ne "\nPerforming Kernel hardening 🔒\n"
-#https://madaidans-insecurities.github.io/guides/linux-hardening.html
-
-#Kernel self-protection
-sudo sysctl sysctl kernel.kptr_restrict=2
-sudo sysctl kernel.dmesg_restrict=1
-sudo sysctl kernel.printk=3 3 3 3
-sudo sysctl kernel.unprivileged_bpf_disabled=1
-sudo sysctl net.core.bpf_jit_harden=2
-sudo sysctl dev.tty.ldisc_autoload=0
-sudo sysctl vm.unprivileged_userfaultfd=0
-sudo sysctl kernel.kexec_load_disabled=1
-sudo sysctl kernel.sysrq=4
-sudo sysctl kernel.unprivileged_userns_clone=0
-sudo sysctl kernel.perf_event_paranoid=3
-
-#Network
-sudo sysctl net.ipv4.tcp_syncookies=1
-sudo sysctl net.ipv4.tcp_rfc1337=1
-sudo sysctl net.ipv4.conf.all.rp_filter=1
-sudo sysctl net.ipv4.conf.default.rp_filter=1
-
-sudo sysctl net.ipv4.conf.all.accept_redirects=0
-sudo sysctl net.ipv4.conf.default.accept_redirects=0
-sudo sysctl net.ipv4.conf.all.secure_redirects=0
-sudo sysctl net.ipv4.conf.default.secure_redirects=0
-sudo sysctl net.ipv6.conf.all.accept_redirects=0
-sudo sysctl net.ipv6.conf.default.accept_redirects=0
-sudo sysctl net.ipv4.conf.all.send_redirects=0
-sudo sysctl net.ipv4.conf.default.send_redirects=0
-
-sudo sysctl net.ipv4.icmp_echo_ignore_all=1
-
-sudo sysctl net.ipv4.conf.all.accept_source_route=0
-sudo sysctl net.ipv4.conf.default.accept_source_route=0
-sudo sysctl net.ipv6.conf.all.accept_source_route=0
-sudo sysctl net.ipv6.conf.default.accept_source_route=0
-
-sudo sysctl net.ipv6.conf.all.accept_ra=0
-sudo sysctl net.ipv6.conf.default.accept_ra=0
-
-sudo sysctl net.ipv4.tcp_sack=0
-sudo sysctl net.ipv4.tcp_dsack=0
-sudo sysctl net.ipv4.tcp_fack=0
-
-#User space
-sudo sysctl kernel.yama.ptrace_scope=2
-
-sudo sysctl vm.mmap_rnd_bits=32
-sudo sysctl vm.mmap_rnd_compat_bits=16
-
-sudo sysctl fs.protected_fifos=2
-sudo sysctl fs.protected_regular=2
-
-# Turn off unnecesary kernel modules
-sudo echo 'blacklist dccp' | sudo tee -a /etc/modprobe.d/blacklist.conf
-sudo echo 'blacklist sctp ' | sudo tee -a /etc/modprobe.d/blacklist.conf
-sudo echo 'blacklist rds ' | sudo tee -a /etc/modprobe.d/blacklist.conf
-sudo echo 'blacklist tipc ' | sudo tee -a /etc/modprobe.d/blacklist.conf
-sudo echo 'blacklist n-hdlc ' | sudo tee -a /etc/modprobe.d/blacklist.conf
-sudo echo 'blacklist ax25 ' | sudo tee -a /etc/modprobe.d/blacklist.conf
-sudo echo 'blacklist netrom ' | sudo tee -a /etc/modprobe.d/blacklist.conf
-sudo echo 'blacklist x25 ' | sudo tee -a /etc/modprobe.d/blacklist.conf
-sudo echo 'blacklist rose ' | sudo tee -a /etc/modprobe.d/blacklist.conf
-sudo echo 'blacklist decnet ' | sudo tee -a /etc/modprobe.d/blacklist.conf
-sudo echo 'blacklist econet ' | sudo tee -a /etc/modprobe.d/blacklist.conf
-sudo echo 'blacklist af_802154 ' | sudo tee -a /etc/modprobe.d/blacklist.conf
-sudo echo 'blacklist ipx ' | sudo tee -a /etc/modprobe.d/blacklist.conf
-sudo echo 'blacklist appletalk ' | sudo tee -a /etc/modprobe.d/blacklist.conf
-sudo echo 'blacklist psnap ' | sudo tee -a /etc/modprobe.d/blacklist.conf
-sudo echo 'blacklist p8023 ' | sudo tee -a /etc/modprobe.d/blacklist.conf
-sudo echo 'blacklist p8022 ' | sudo tee -a /etc/modprobe.d/blacklist.conf
-sudo echo 'blacklist can ' | sudo tee -a /etc/modprobe.d/blacklist.conf
-sudo echo 'blacklist atm ' | sudo tee -a /etc/modprobe.d/blacklist.conf
-sudo echo 'blacklist cramfs ' | sudo tee -a /etc/modprobe.d/blacklist.conf
-sudo echo 'blacklist freevxfs ' | sudo tee -a /etc/modprobe.d/blacklist.conf
-sudo echo 'blacklist jffs2 ' | sudo tee -a /etc/modprobe.d/blacklist.conf
-sudo echo 'blacklist hfs ' | sudo tee -a /etc/modprobe.d/blacklist.conf
-sudo echo 'blacklist hfsplus ' | sudo tee -a /etc/modprobe.d/blacklist.conf
-sudo echo 'blacklist squashfs ' | sudo tee -a /etc/modprobe.d/blacklist.conf
-sudo echo 'blacklist udf ' | sudo tee -a /etc/modprobe.d/blacklist.conf
-sudo echo 'blacklist bluetooth ' | sudo tee -a /etc/modprobe.d/blacklist.conf
-sudo echo 'blacklist btusb ' | sudo tee -a /etc/modprobe.d/blacklist.conf
-sudo echo 'blacklist uvcvideo ' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    echo -ne "\nPerforming Kernel hardening 🔒\n"
+    #https://madaidans-insecurities.github.io/guides/linux-hardening.html
+    
+    #Kernel self-protection
+    sudo sysctl sysctl kernel.kptr_restrict=2
+    sudo sysctl kernel.dmesg_restrict=1
+    sudo sysctl kernel.printk=3 3 3 3
+    sudo sysctl kernel.unprivileged_bpf_disabled=1
+    sudo sysctl net.core.bpf_jit_harden=2
+    sudo sysctl dev.tty.ldisc_autoload=0
+    sudo sysctl vm.unprivileged_userfaultfd=0
+    sudo sysctl kernel.kexec_load_disabled=1
+    sudo sysctl kernel.sysrq=4
+    sudo sysctl kernel.unprivileged_userns_clone=0
+    sudo sysctl kernel.perf_event_paranoid=3
+    
+    #Network
+    sudo sysctl net.ipv4.tcp_syncookies=1
+    sudo sysctl net.ipv4.tcp_rfc1337=1
+    sudo sysctl net.ipv4.conf.all.rp_filter=1
+    sudo sysctl net.ipv4.conf.default.rp_filter=1
+    
+    sudo sysctl net.ipv4.conf.all.accept_redirects=0
+    sudo sysctl net.ipv4.conf.default.accept_redirects=0
+    sudo sysctl net.ipv4.conf.all.secure_redirects=0
+    sudo sysctl net.ipv4.conf.default.secure_redirects=0
+    sudo sysctl net.ipv6.conf.all.accept_redirects=0
+    sudo sysctl net.ipv6.conf.default.accept_redirects=0
+    sudo sysctl net.ipv4.conf.all.send_redirects=0
+    sudo sysctl net.ipv4.conf.default.send_redirects=0
+    
+    sudo sysctl net.ipv4.icmp_echo_ignore_all=1
+    
+    sudo sysctl net.ipv4.conf.all.accept_source_route=0
+    sudo sysctl net.ipv4.conf.default.accept_source_route=0
+    sudo sysctl net.ipv6.conf.all.accept_source_route=0
+    sudo sysctl net.ipv6.conf.default.accept_source_route=0
+    
+    sudo sysctl net.ipv6.conf.all.accept_ra=0
+    sudo sysctl net.ipv6.conf.default.accept_ra=0
+    
+    sudo sysctl net.ipv4.tcp_sack=0
+    sudo sysctl net.ipv4.tcp_dsack=0
+    sudo sysctl net.ipv4.tcp_fack=0
+    
+    #User space
+    sudo sysctl kernel.yama.ptrace_scope=2
+    
+    sudo sysctl vm.mmap_rnd_bits=32
+    sudo sysctl vm.mmap_rnd_compat_bits=16
+    
+    sudo sysctl fs.protected_fifos=2
+    sudo sysctl fs.protected_regular=2
+    
+    # Turn off unnecesary kernel modules
+    sudo echo 'blacklist dccp' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'blacklist sctp ' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'blacklist rds ' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'blacklist tipc ' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'blacklist n-hdlc ' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'blacklist ax25 ' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'blacklist netrom ' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'blacklist x25 ' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'blacklist rose ' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'blacklist decnet ' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'blacklist econet ' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'blacklist af_802154 ' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'blacklist ipx ' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'blacklist appletalk ' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'blacklist psnap ' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'blacklist p8023 ' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'blacklist p8022 ' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'blacklist can ' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'blacklist atm ' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'blacklist cramfs ' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'blacklist freevxfs ' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'blacklist jffs2 ' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'blacklist hfs ' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'blacklist hfsplus ' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'blacklist squashfs ' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'blacklist udf ' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'blacklist bluetooth ' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'blacklist btusb ' | sudo tee -a /etc/modprobe.d/blacklist.conf
+    sudo echo 'blacklist uvcvideo ' | sudo tee -a /etc/modprobe.d/blacklist.conf
+}
 
 function Firewall() {
     echo -ne "\n${ORANGE}Setting up Firewall 🔥${NO_COLOR}\n"
