@@ -1,7 +1,6 @@
 # RaspberryPi-Protector
 ## Table of contents
 * [General info](#general-info)
-* [Technologies used in project](#technologies)
 * [Setup](#setup)
 
 ## General info
