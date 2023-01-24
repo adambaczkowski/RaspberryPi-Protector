@@ -25,12 +25,12 @@ function main() {
     HOST_MASK_ADDRESS=$(ip addr show | grep -oP '^[0-9]+: \K(e[^:]*)')
     EMAIL=$(whiptail --inputbox "Enter your email address:" 8 78 --title "Email" 3>&1 1>&2 2>&3)
     EMAIL_PASSWORD=$(whiptail --passwordbox "Enter your email password:" 8 78 --title "Password" 3>&1 1>&2 2>&3)
-    GRAFANA_LOGIN=$(whiptail --inputbox "Enter your Grafana login:" 8 78 --title "Grafana Login" 3>&1 1>&2 2>&3)
-    GRAFANA_PASSWORD=$(whiptail --passwordbox "Enter your Grafana password:" 8 78 --title "Grafana Password" 3>&1 1>&2 2>&3)
-    NEXTCLOUD_LOGIN=$(whiptail --inputbox "Enter your Nextcloud login:" 8 78 --title "Nextcloud Login" 3>&1 1>&2 2>&3)
-    NEXTCLOUD_PASSWORD=$(whiptail --passwordbox "Enter your Nextcloud password:" 8 78 --title "Nextcloud Password" 3>&1 1>&2 2>&3)
+    #GRAFANA_LOGIN=$(whiptail --inputbox "Enter your Grafana login:" 8 78 --title "Grafana Login" 3>&1 1>&2 2>&3)
+    #GRAFANA_PASSWORD=$(whiptail --passwordbox "Enter your Grafana password:" 8 78 --title "Grafana Password" 3>&1 1>&2 2>&3)
+    #NEXTCLOUD_LOGIN=$(whiptail --inputbox "Enter your Nextcloud login:" 8 78 --title "Nextcloud Login" 3>&1 1>&2 2>&3)
+    #NEXTCLOUD_PASSWORD=$(whiptail --passwordbox "Enter your Nextcloud password:" 8 78 --title "Nextcloud Password" 3>&1 1>&2 2>&3)
     NEXTCLOUD_DB_PASSWORD=$(whiptail --passwordbox "Enter your Nextcloud Database password:" 8 78 --title "Nextcloud Database Password" 3>&1 1>&2 2>&3)
-    OINKCODE=$(whiptail --inputbox "Enter your Oinkcode for Snort. If you don't have Snort account, please register at https://www.snort.org/users/sign_in in order to get newest Snort ules:" 8 78 --title "Snort Oinkcode" 3>&1 1>&2 2>&3)
+    #OINKCODE=$(whiptail --inputbox "Enter your Oinkcode for Snort. If you don't have Snort account, please register at https://www.snort.org/users/sign_in in order to get newest Snort ules:" 8 78 --title "Snort Oinkcode" 3>&1 1>&2 2>&3)
     SSH_CLIENT_IP=$(echo -ne $SSH_CLIENT | awk '{ print $1}')
     
     SSH_CUSTOM_PORT_NUMBER=$(whiptail --inputbox "Enter your custom SSH port number between 1024 and 65536 :" 8 78 --title "SSH Port" 3>&1 1>&2 2>&3)
@@ -198,8 +198,8 @@ function rsyslog_installer() {
     sudo sed -i 's/#module(load="imtcp")/module(load="imtcp")/' /etc/rsyslog.conf
     sudo sed -i 's/#input(type="imtcp" port="514")/input(type="imtcp" port="514")/' /etc/rsyslog.conf
     
-    echo '$template LokiFormat,"<%pri%>%protocol-version% %timestamp:::date-rfc3339% %HOSTNAME% %app-name% %procid% %msgid% [snort_event_id=%msg%][snort_sid=%msg:::json%][snort_gid=%msg:::json%]"' | sudo tee -a /etc/rsyslog.d/snort_logs.conf
-    echo 'if $programname == 'snort' then @@127.0.0.1:3100;LokiFormat;' | sudo tee -a /etc/rsyslog.d/snort_logs.conf
+    echo '$template LokiFormat,"<%pri%>%protocol-version% %timestamp:::date-rfc3339% %HOSTNAME% %app-name% %procid% %msgid% [snort_event_id=%msg%][snort_sid=%msg:::json%][snort_gid=%msg:::json%]"' | sudo tee -a /etc/rsyslog.d/snort_logs.conf > /dev/null 2>&1
+    echo 'if $programname == 'snort' then @@127.0.0.1:3100;LokiFormat;' | sudo tee -a /etc/rsyslog.d/snort_logs.conf > > /dev/null 2>&1
     
     sudo systemctl daemon-reload
     sudo systemctl enable rsyslog
@@ -578,6 +578,8 @@ function OS_Hardening() {
     sudo awk -F: '($2 == "") {print}' /etc/shadow
     echo "Disabling Telnet"
     sudo apt-get remove telnetd -y /dev/null 2>&1
+    echo "Turining off shared memory"
+    sudo echo "tmpfs /run/shm tmpfs defaults,noexec,nosuid 0 0" | sudo tee -a /etc/fstab
 }
 
 function Kernel_Hardening() {
@@ -669,8 +671,7 @@ function Kernel_Hardening() {
 
 function Firewall() {
     echo -ne "\n${ORANGE}Setting up Firewall 🔥${NO_COLOR}\n"
-    sudo echo -ne "y" | sudo ufw enable
-    sudo ufw allow ssh
+    sudo ufw allow 22
     sudo ufw allow 80
     sudo ufw allow 443
     sudo ufw allow 8080
@@ -687,6 +688,7 @@ function Firewall() {
     sudo ufw allow 2222
     sudo ufw allow 514
     sudo ufw allow $SSH_CUSTOM_PORT_NUMBER
+    sudo echo -ne "y" | sudo ufw enable
     sudo sed -i 's/#   Port 22/    Port '$SSH_CUSTOM_PORT_NUMBER'/' /etc/ssh/ssh_config
     sudo sed -i 's/#Port 22/Port '$SSH_CUSTOM_PORT_NUMBER'/' /etc/ssh/sshd_config
     sudo systemctl daemon-reload
