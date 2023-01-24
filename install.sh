@@ -25,12 +25,12 @@ function main() {
     HOST_MASK_ADDRESS=$(ip addr show | grep -oP '^[0-9]+: \K(e[^:]*)')
     EMAIL=$(whiptail --inputbox "Enter your email address:" 8 78 --title "Email" 3>&1 1>&2 2>&3)
     EMAIL_PASSWORD=$(whiptail --passwordbox "Enter your email password:" 8 78 --title "Password" 3>&1 1>&2 2>&3)
-    #GRAFANA_LOGIN=$(whiptail --inputbox "Enter your Grafana login:" 8 78 --title "Grafana Login" 3>&1 1>&2 2>&3)
-    #GRAFANA_PASSWORD=$(whiptail --passwordbox "Enter your Grafana password:" 8 78 --title "Grafana Password" 3>&1 1>&2 2>&3)
-    #NEXTCLOUD_LOGIN=$(whiptail --inputbox "Enter your Nextcloud login:" 8 78 --title "Nextcloud Login" 3>&1 1>&2 2>&3)
-    #NEXTCLOUD_PASSWORD=$(whiptail --passwordbox "Enter your Nextcloud password:" 8 78 --title "Nextcloud Password" 3>&1 1>&2 2>&3)
+    GRAFANA_LOGIN=$(whiptail --inputbox "Enter your Grafana login:" 8 78 --title "Grafana Login" 3>&1 1>&2 2>&3)
+    GRAFANA_PASSWORD=$(whiptail --passwordbox "Enter your Grafana password:" 8 78 --title "Grafana Password" 3>&1 1>&2 2>&3)
+    NEXTCLOUD_LOGIN=$(whiptail --inputbox "Enter your Nextcloud login:" 8 78 --title "Nextcloud Login" 3>&1 1>&2 2>&3)
+    NEXTCLOUD_PASSWORD=$(whiptail --passwordbox "Enter your Nextcloud password:" 8 78 --title "Nextcloud Password" 3>&1 1>&2 2>&3)
     NEXTCLOUD_DB_PASSWORD=$(whiptail --passwordbox "Enter your Nextcloud Database password:" 8 78 --title "Nextcloud Database Password" 3>&1 1>&2 2>&3)
-    #OINKCODE=$(whiptail --inputbox "Enter your Oinkcode for Snort. If you don't have Snort account, please register at https://www.snort.org/users/sign_in in order to get newest Snort ules:" 8 78 --title "Snort Oinkcode" 3>&1 1>&2 2>&3)
+    OINKCODE=$(whiptail --inputbox "Enter your Oinkcode for Snort. If you don't have Snort account, please register at https://www.snort.org/users/sign_in in order to get newest Snort ules:" 8 78 --title "Snort Oinkcode" 3>&1 1>&2 2>&3)
     SSH_CLIENT_IP=$(echo -ne $SSH_CLIENT | awk '{ print $1}')
     
     SSH_CUSTOM_PORT_NUMBER=$(whiptail --inputbox "Enter your custom SSH port number between 1024 and 65536 :" 8 78 --title "SSH Port" 3>&1 1>&2 2>&3)
@@ -47,7 +47,7 @@ function main() {
     else
         echo "Custom SSH port number: $SSH_CUSTOM_PORT_NUMBER"
     fi
-    
+    sudo systemctl enable ssh
     #&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
     sleep 5
     check_device_info
@@ -231,7 +231,6 @@ function pulledpork_installation() {
     sudo chmod +x /usr/local/bin/pulledpork.pl
     sudo mkdir /etc/pulledpork
     sudo cp etc/*.conf /etc/pulledpork/
-    
     sudo sed -i "s/<oinkcode>/$OINKCODE/g" /etc/pulledpork/pulledpork.conf
     sudo sed -i "s/#rule_url=https:\/\/rules.emergingthreats.net\//https://www.snort.org/rules/snortrules-snapshot-29151.tar.gz?oinkcode='$OINKCODE'\//g" /etc/pulledpork/pulledpork.conf
     sudo sed -i "s/\/usr\/local\/etc\/snort\//\/etc\/snort\//g" /etc/pulledpork/pulledpork.conf
@@ -241,8 +240,6 @@ function pulledpork_installation() {
     sudo sed -i "s/# modifysid=/enablesid=/g" /etc/pulledpork/pulledpork.conf
     sudo sed -i "s/distro=FreeBSD-12/distro=Ubuntu-18-4/g" /etc/pulledpork/pulledpork.conf
     sudo sed -i "s/# out_path=/out_path=/g" /etc/pulledpork/pulledpork.conf
-    
-    
     sudo chmod 766 /etc/crontab
     sudo echo "0 */12 * * * root /usr/local/bin/pulledpork.pl -c /etc/pulledpork/pulledpork.conf -i disablesid.conf -T -H" >> /etc/crontab
     sudo echo "0 */12 * * * root /usr/local/bin/ruleitor" >> /etc/crontab
@@ -295,7 +292,6 @@ function grafana_installer() {
     sudo service grafana-server start
     sudo systemctl enable grafana-server
     sudo usermod -a -G adm grafana
-    
 }
 
 function prometheus_installer() {
@@ -453,6 +449,7 @@ function fail2ban_installer() {
     
     echo -n "maxretry = 3" | sudo tee -a /etc/fail2ban/jail.d/defaults-debian.conf
     
+    sudo systemctl reload ssh
     sudo systemctl daemon-reload
     sudo systemctl enable fail2ban
     sudo systemctl start fail2ban
@@ -543,6 +540,7 @@ _jailname = honeypot
 failregex = honeypot: .*? SRC=<HOST>
     " | sudo tee -a /etc/fail2ban/filter.d/honeypot.conf > /dev/null 2>&1
     sudo fail2ban-client reload honeypot
+    sudo systemctl reload ssh
     
 }
 
@@ -671,6 +669,7 @@ function Kernel_Hardening() {
 
 function Firewall() {
     echo -ne "\n${ORANGE}Setting up Firewall 🔥${NO_COLOR}\n"
+    sudo systemctl reload ssh
     sudo ufw allow 22
     sudo ufw allow 80
     sudo ufw allow 443
@@ -692,7 +691,6 @@ function Firewall() {
     sudo sed -i 's/#   Port 22/    Port '$SSH_CUSTOM_PORT_NUMBER'/' /etc/ssh/ssh_config
     sudo sed -i 's/#Port 22/Port '$SSH_CUSTOM_PORT_NUMBER'/' /etc/ssh/sshd_config
     sudo systemctl daemon-reload
-    sudo systemctl enable ssh
     sudo systemctl reload ssh
     sudo fail2ban-client set sshd unbanip $SSH_CLIENT_IP
 }
