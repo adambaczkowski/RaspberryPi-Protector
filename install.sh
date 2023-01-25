@@ -197,10 +197,6 @@ function rsyslog_installer() {
     sudo sed -i 's/#input(type="imudp" port="514")/input(type="imudp" port="514")/' /etc/rsyslog.conf
     sudo sed -i 's/#module(load="imtcp")/module(load="imtcp")/' /etc/rsyslog.conf
     sudo sed -i 's/#input(type="imtcp" port="514")/input(type="imtcp" port="514")/' /etc/rsyslog.conf
-    
-    echo '$template LokiFormat,"<%pri%>%protocol-version% %timestamp:::date-rfc3339% %HOSTNAME% %app-name% %procid% %msgid% [snort_event_id=%msg%][snort_sid=%msg:::json%][snort_gid=%msg:::json%]"' | sudo tee -a /etc/rsyslog.d/snort_logs.conf > /dev/null 2>&1
-    echo 'if $programname == 'snort' then @@127.0.0.1:3100;LokiFormat;' | sudo tee -a /etc/rsyslog.d/snort_logs.conf > > /dev/null 2>&1
-    
     sudo systemctl daemon-reload
     sudo systemctl enable rsyslog
     sudo systemctl restart rsyslog
@@ -687,11 +683,6 @@ function Firewall() {
     sudo ufw allow 2222
     sudo ufw allow 514
     sudo ufw allow $SSH_CUSTOM_PORT_NUMBER
-    sudo echo -ne "y" | sudo ufw enable
-    sudo sed -i 's/#   Port 22/    Port '$SSH_CUSTOM_PORT_NUMBER'/' /etc/ssh/ssh_config
-    sudo sed -i 's/#Port 22/Port '$SSH_CUSTOM_PORT_NUMBER'/' /etc/ssh/sshd_config
-    sudo systemctl daemon-reload
-    sudo systemctl reload ssh
     sudo fail2ban-client set sshd unbanip $SSH_CLIENT_IP
 }
 
@@ -750,6 +741,10 @@ function Cleanup() {
 }
 
 function summary() {
+    sudo sed -i 's/#   Port 22/    Port '$SSH_CUSTOM_PORT_NUMBER'/' /etc/ssh/ssh_config
+    sudo sed -i 's/#Port 22/Port '$SSH_CUSTOM_PORT_NUMBER'/' /etc/ssh/sshd_config
+    sudo systemctl daemon-reload
+    sudo systemctl reload ssh
     clear
     echo "SUMMARY:"
     echo "Docker containers status"
@@ -759,6 +754,7 @@ function summary() {
     echo "Firewall rules"
     sudo ufw status numbered
     echo -ne "\n🟡 Your SSH Port is switched to: "$SSH_CUSTOM_PORT_NUMBER" remember that during next SSH session. ssh <user>@{server-ip-address} -p "$SSH_CUSTOM_PORT_NUMBER "🟡\n"
+    sudo echo -ne "y" | sudo ufw enable
 }
 
 function reboot_function() {
